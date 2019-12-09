@@ -1,0 +1,55 @@
+{% extends 'admin/master.html' %}
+
+{% block brand %}
+    <style>.container {width: 96%;}</style>
+    <h4 id="brand" style="width:200px"> * Flask Tracker *</h4>
+{% endblock %}
+
+{% block access_control %}
+{% if current_user.is_authenticated %}
+<div class="btn-group pull-right">
+    <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+        <i class="icon-user"></i> {{ current_user.login }} <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+        <li><a href="{{ url_for('admin.logout') }}">Log out</a></li>
+    </ul>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block body %}
+
+<style>
+    .container {width: 96%;}
+</style>
+
+{{ super() }}
+
+    <div>
+        {% if current_user.is_authenticated %}
+            <div> <h4>Flask Tracker</h4> </div>
+        {% else %}
+        <form method="POST" action="">
+            {{ form.hidden_tag() if form.hidden_tag }}
+            {% for f in form if f.type != 'CSRFTokenField' %}
+            <div>
+            {{ f.label }}
+            {{ f }}
+            {% if f.errors %}
+            <ul>
+                {% for e in f.errors %}
+                <li>{{ e }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            </div>
+            {% endfor %}
+            <button class="btn" type="submit">Submit</button>
+        </form>
+        {{ link | safe }}
+        {% endif %}
+    </div>
+
+
+{% endblock body %}

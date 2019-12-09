@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>html editor</title>
+    <script type="text/javascript" src="/static/lib/jquery.js"></script>
+    <script type="text/javascript" src="/static/lib/markitup/jquery.markitup.js"></script>
+    <script type="text/javascript" src="/static/lib/markitup/sets/default/set.js"></script>
+    
+    <link rel="stylesheet" type="text/css" href="/static/lib/markitup/skins/markitup/style.css" />
+    <link rel="stylesheet" type="text/css" href="/static/lib/markitup/sets/default/style.css" />
+
+</head>
+<body class="theme-light">
+
+    <script type="text/javascript" >
+       $(document).ready(function() {
+          $("#markItUp").markItUp(mySettings);
+       });
+    </script>
+
+
+    <textarea id="markItUp"></textarea>
+
+</body>
+</html>
