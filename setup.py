@@ -38,6 +38,7 @@ INSTALL_REQUIRES = [
     'waitress',  # WSGI server (https://docs.pylonsproject.org/projects/waitress)
     'iso8601',
     'flask-login',
+    'markdown2',
 ]
 
 SETUP_KW_ARGS = {

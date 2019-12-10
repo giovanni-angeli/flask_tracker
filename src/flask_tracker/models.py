@@ -33,14 +33,17 @@ def generate_id():
 def populate_default_db(app, db):
     
     fixtes = [
-        (Client, {'name': 'Alfa'}),
+        (Customer, {'name': 'Alfa'}),
+        (Customer, {'name': 'Comex'}),
         (Project, {'name': 'Thor'}),
         (Project, {'name': 'Desk'}),
-        (Milestone, {'name': 'M1'}),
-        (Milestone, {'name': 'M2'}),
-        (Milestone, {'name': 'M3'}),
-        (Order, {'name': 'O1'}),
-        (Order, {'name': 'O2'}),
+        (Project, {'name': 'ColorLab'}),
+        (Milestone, {'name': '2020.q1'}),
+        (Milestone, {'name': '2020.q2'}),
+        (Milestone, {'name': '2020.q2'}),
+        (Milestone, {'name': '2020.q3'}),
+        (Order, {'name': 'O_001'}),
+        (Order, {'name': 'O_002'}),
         (User, {'name': 'admin', 'password': generate_password_hash('admin'), 'email': 'admin@gmail.com'}),
         (User, {'name': 'test', 'password': generate_password_hash('test'), 'email': 'test@gmail.com'}),
     ]
@@ -108,9 +111,9 @@ class Project(BaseModel, sqlalchemy_db_.Model):  # pylint: disable=too-few-publi
     milestones = sqlalchemy_db_.relationship('Milestone', backref='project')
     orders = sqlalchemy_db_.relationship('Order', backref='project')
 
-class Client(BaseModel, sqlalchemy_db_.Model):   # pylint: disable=too-few-public-methods
+class Customer(BaseModel, sqlalchemy_db_.Model):   # pylint: disable=too-few-public-methods
 
-    orders = sqlalchemy_db_.relationship('Order', backref='client')
+    orders = sqlalchemy_db_.relationship('Order', backref='customer')
 
 class Order(BaseModel, sqlalchemy_db_.Model):    # pylint: disable=too-few-public-methods
 
@@ -118,12 +121,12 @@ class Order(BaseModel, sqlalchemy_db_.Model):    # pylint: disable=too-few-publi
 
     project_id   = sqlalchemy_db_.Column(sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('project.id'))
 
-    client_id   = sqlalchemy_db_.Column(sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('client.id'))
+    customer_id   = sqlalchemy_db_.Column(sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('customer.id'))
 
     def __str__(self):
-        client_name = (self.client and self.client.name) or 'none'
+        customer_name = (self.customer and self.customer.name) or 'none'
         project_name = (self.project and self.project.name) or 'none'
-        return "{}:{}.{}".format(project_name, client_name, self.name)
+        return "{}:{}.{}".format(project_name, customer_name, self.name)
 
 class Milestone(BaseModel, sqlalchemy_db_.Model):     # pylint: disable=too-few-public-methods
 
@@ -152,7 +155,7 @@ class User(BaseModel, sqlalchemy_db_.Model):     # pylint: disable=too-few-publi
     role = sqlalchemy_db_.Column(sqlalchemy_db_.Unicode(32), default='guest')
     worktimes = sqlalchemy_db_.relationship('WorkTime', backref='user')
 
-    assigned_tasks = sqlalchemy_db_.relationship('Task', backref='assigee')
+    tasks = sqlalchemy_db_.relationship('Task', backref='assignee')
 
     @property
     def login(self):
@@ -186,11 +189,8 @@ class Task(BaseModel, sqlalchemy_db_.Model):     # pylint: disable=too-few-publi
 
     order_id = sqlalchemy_db_.Column(sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('order.id'))
     milestone_id = sqlalchemy_db_.Column(sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('milestone.id'))
-    assignee_id = sqlalchemy_db_.Column(sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('user.id'))
+    user_id = sqlalchemy_db_.Column(sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('user.id'))
 
-    name = sqlalchemy_db_.Column(sqlalchemy_db_.Unicode(64), nullable=False, unique=True, index=True)
-    id_ = sqlalchemy_db_.Column(sqlalchemy_db_.Unicode, primary_key=True, nullable=False, default=generate_id)
-    
     parent_id = sqlalchemy_db_.Column(sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('task.id'))
     related_tasks = sqlalchemy_db_.relationship("Task")    
     # ~ parent = sqlalchemy_db_.relationship("Task", remote_side=[id_])

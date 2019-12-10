@@ -24,17 +24,20 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from wtforms import form, fields, validators
 
+from jinja2 import contextfunction
+
 import flask_admin  # pylint: disable=import-error
 import flask_login  # pylint: disable=import-error
 from flask_admin.base import MenuLink, Admin     # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
 
+import markdown2
 
 from flask_tracker.models import (
         Task,
         Project,
         Milestone,
-        Client,
+        Customer,
         Order, 
         User, 
     )
@@ -56,7 +59,7 @@ ROLES_CAPABILITIES_MAP = {
         'project': 'crud',
         'milestone': 'crud',
         'order': 'r',
-        'client': 'r',
+        'customer': 'r',
     }, 
     'task_admin': {
         'default': 'r',
@@ -65,7 +68,7 @@ ROLES_CAPABILITIES_MAP = {
         'project': 'r',
         'milestone': 'r',
         'order': 'r',
-        'client': 'r',
+        'customer': 'r',
     }, 
     'guest': {'default': 'r'}, 
     'suspended': {'default': ''}, 
@@ -80,7 +83,7 @@ class TrackerModelView(ModelView):
     export_max_rows = 1000
     export_types = ['csv', 'xls', 'json']
 
-    # ~ details_template = "admin/custom_details.html"
+    details_template = "admin/details.html"
     list_template = 'admin/list.html'
     create_template = 'admin/create.html'
     edit_template = 'admin/edit.html'
@@ -114,7 +117,7 @@ class TrackerModelView(ModelView):
 class OrderView(TrackerModelView):
 
     column_editable_list = (
-        'client',
+        'customer',
         'project',
     )
 
@@ -166,12 +169,15 @@ class UserView(TrackerModelView):
 
 class TaskView(TrackerModelView):
 
+    # ~ edit_template = 'admin/task_edit.html'
+    # ~ edit_template = 'task_editor_page.html'
+
     can_delete = False
 
     form_args = {
         'content': {
             'label': 'content',
-        }
+        },
     }
 
     form_choices = {
@@ -179,18 +185,12 @@ class TaskView(TrackerModelView):
     }
 
     form_widget_args = {
-        'content': {
-            'rows': 10,
-        }
     }
 
     column_list = (
         'name',
-        # ~ 'project',
         'milestone',
-        # ~ 'milestone.project',
         'order',
-        # ~ 'order.client',
         'related_tasks',
         'assignee',
         'worktimes',
@@ -201,7 +201,7 @@ class TaskView(TrackerModelView):
         # ~ 'spent_hours',
         # ~ 'parent_id',
         # ~ 'parent.name',
-        'assignee_id',
+        # ~ 'assignee_id',
         'related_tasks',
     )
 
@@ -210,18 +210,44 @@ class TaskView(TrackerModelView):
         'date_modified',
         'description',
         'order.name',
-        'order.client',
+        'order.customer',
         'milestone.project',
         'milestone.name',
         # ~ 'product.brand',
     )
 
-    form_excluded_columns = (
-        'date_created',
-        'date_modified',
-        'created_by',
-        'worktimes',
+    form_columns = (
+        'name',
+        'description',
+        'department',
+        'milestone',
+        'order',
+        'related_tasks',
+        'assignee',
+        'content',
     )
+
+    # ~ form_excluded_columns = (
+        # ~ 'date_created',
+        # ~ 'date_modified',
+        # ~ 'created_by',
+        # ~ 'worktimes',
+        # ~ 'content',
+    # ~ )
+
+    def get_edit_form(self):
+        form = super(TaskView, self).get_edit_form()
+        form.content = fields.TextAreaField(u'* content *', [validators.optional(), validators.length(max=5000)], render_kw={'rows': '20'})
+        form.preview_content = fields.BooleanField(u'* preview content *', [], render_kw={})
+        return form
+
+    @contextfunction
+    def get_detail_value(self, context, model, name):
+        ret = super().get_detail_value(context, model, name)
+        if name == 'content':
+            ret = markdown2.markdown(ret)
+            ret = Markup(ret)
+        return ret
 
 
 class TrackerAdminResources(flask_admin.AdminIndexView):
@@ -320,7 +346,7 @@ def init_admin(app, db):
     admin_.add_view(ProjectView(Project, db.session))
     admin_.add_view(MilestoneView(Milestone, db.session))
     admin_.add_view(OrderView(Order, db.session))
-    admin_.add_view(TrackerModelView(Client, db.session, category="admin"))
+    admin_.add_view(TrackerModelView(Customer, db.session, category="admin"))
     admin_.add_view(UserView(User, db.session, category="admin"))
 
     return admin_

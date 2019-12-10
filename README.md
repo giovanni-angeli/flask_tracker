@@ -1,8 +1,6 @@
 # flask_tracker
 a sample activity tracker based on Flask Admin 
 (https://flask-admin.readthedocs.io) 
-and using markitup 
-(https://markitup.jaysalvat.com)
 
 # flask_tracker:
 

@@ -22,3 +22,36 @@
 
 {{ super() }}
 
+{% block tail %}
+
+    <script type="text/javascript" >
+        var refresh_preview_content = function(result, status, xhr){
+            document.getElementById('preview_content').innerHTML = result.responseText;
+        }
+        var preview_content = function() {
+            var e = document.getElementById("content");
+            console.log("content: " + e.text);
+            var data = {'content': e.text};
+            $.ajax({
+                data: data,
+                dataType: "json",
+                success: refresh_preview_content,
+                error: refresh_preview_content,
+                contentType: "application/json",
+                timeout: 5000,
+                url: '/admin/preview_task_content',
+                method: POST
+            });
+        }
+        $(document).ready(function() {
+            var e = document.getElementById("preview_content_button");
+            if (e) {
+                e.addEventListener("click", preview_content);
+            }
+        });
+    </script>
+
+{% endblock tail %}
+
+
+
