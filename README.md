@@ -1,5 +1,5 @@
 # flask_tracker
-a simple activity tracker based on Flask Admin (https://flask-admin.readthedocs.io).
+a **very** simplified activity-tracker based on Flask Admin (https://flask-admin.readthedocs.io).
 
 flask_tracker is a variation on the theme of activity trackers (Trac, Redmine, Assembla, Trello, ...), based on a home-made approach in order to get:
 * total control, versatilty and customability.
