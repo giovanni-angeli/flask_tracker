@@ -1,6 +1,9 @@
 
+#~ set handy environment variables
+#~ source me to use them all
+
 export PYTHONDONTWRITEBYTECODE=1
-export FT_PROJECT_ROOT=/opt/alfaprojects/flask_tracker
+export FT_PROJECT_ROOT=/opt/PROJECTS/flask_tracker
 export FT_RUNDATA_ROOT=/opt/flask_tracker/data
 export FT_VENV_ROOT=/opt/flask_tracker/venv
 alias ft_create_virtenv="virtualenv -p /usr/bin/python3 ${FT_VENV_ROOT}"

@@ -50,8 +50,9 @@ SETUP_KW_ARGS = {
     'author': 'giovanni angeli',
     'author_email': 'giovanni.angeli6@gmail.com',
     'classifiers': [
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 2 - Pre-Alpha',
         'Programming Language :: Python :: 3',
+        'Framework :: Flask', 
     ],
     'install_requires': INSTALL_REQUIRES,
     'entry_points': {

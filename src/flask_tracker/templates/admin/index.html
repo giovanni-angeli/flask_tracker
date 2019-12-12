@@ -22,6 +22,10 @@
 
 <style>
     .container {width: 96%;}
+    .page-alfa {
+        border: 1px solid #CCCCCC;'
+        background-color: #FFEECC;'
+    }
 </style>
 
 {{ super() }}
@@ -51,5 +55,46 @@
         {% endif %}
     </div>
 
+
+<div class="container-fluid page-alfa">
+    <div class="row">
+        <div class="col-sm-1">
+        </div>
+        <div class="col-sm-3 table-responsive">
+
+            <table class="table table-striped table-bordered table-hover model-list">
+                <thead>
+                    <tr>
+                        <th class="col-md-4">
+                        </th>
+                    </tr>            
+                    <tr>
+                        <th class="col-md-4">filtered task views</th>
+                    </tr>            
+                </thead>            
+
+                {% for a, b in filtered_views %}
+                <tr>
+                    <td class="col-md-1"> 
+                        <a href="{{ b }}">{{ a }}</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>            
+        </div>
+        <div class="col-sm-2 table-responsive">
+
+            <form action="/add_a_working_time_slot" method='GET'>
+            <label for="selected_task"> Add a Working Hours to Task: </label>
+            <select class="form-control" name="selected_task">
+                {% for t in assigned_task_names %}
+                <option name="{{ t }}">{{ t }}</option>
+                {% endfor %}
+            </select>
+            <button class="form-control" type="submit">add</button>
+            </form>
+        </div>
+    </div>
+</div>
 
 {% endblock body %}

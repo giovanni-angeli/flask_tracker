@@ -57,7 +57,7 @@ def init_app():
 
     set_logging(app.config.get("LOG_LEVEL", logging.WARNING))
 
-    db, session = init_db(app)
+    db = init_db(app)
     init_admin(app, db)
 
     app._static_folder = os.path.join(here, 'static')

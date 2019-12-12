@@ -8,50 +8,81 @@
 # pylint: disable=too-many-locals
 # pylint: disable=broad-except
 
-import os
-import time
 import logging
 import traceback
-import json
-import tempfile
 
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
-from flask import (Markup, url_for, redirect, request, flash, render_template, Response, abort)  # pylint: disable=import-error
-# ~ from flask import Flask, url_for, redirect, render_template, request
+from flask import (Markup, url_for, redirect, request)  # pylint: disable=import-error
 
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import session as flask_session
 
-from wtforms import form, fields, validators
 
-from jinja2 import contextfunction
+from werkzeug.security import check_password_hash  # pylint: disable=import-error
+
+from jinja2 import contextfunction   # pylint: disable=import-error
+
+from wtforms import form, fields, validators  # pylint: disable=import-error
 
 import flask_admin  # pylint: disable=import-error
-import flask_login  # pylint: disable=import-error
-from flask_admin.base import MenuLink, Admin     # pylint: disable=import-error
+from flask_admin.base import Admin     # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
 
-import markdown2
+import flask_login  # pylint: disable=import-error
+
+import markdown2  # pylint: disable=import-error
 
 from flask_tracker.models import (
-        Task,
-        Project,
-        Milestone,
-        Customer,
-        Order, 
-        User, 
-    )
+    Task,
+    Project,
+    Milestone,
+    Customer,
+    Order,
+    User,
+    WorkTime,
+    MODELS_GLOBAL_CONTEXT,
+)
+
+MAX_ASSIGNED_TAX_PER_USER = 100
 
 DEPARTMENTS = [
-    ('SW', 'SW'), 
-    ('FW', 'FW'), 
-    ('mechanical', 'Mechanical'), 
-    ('electronics', 'Electronics'), 
+    ('SW', 'SW'),
+    ('FW', 'FW'),
+    ('mechanical', 'Mechanical'),
+    ('electronics', 'Electronics'),
     ('lab', 'Lab'),
 ]
 
+TASK_STATUSES = [
+    ('new', 'New'),
+    ('open', 'Open'),
+    ('in_progress', 'In Progress'),
+    ('suspended', 'Suspended'),
+    ('closed', 'Closed'),
+    ('invalid', 'Invalid'),
+    ('dead', 'Dead'), ]
+
+TASK_STATUSES_FORBIDDEN_TRANSITIONS = (
+
+    'new_closed',
+    'new_in_progress',
+    'new_suspended',
+    'new_closed',
+    'new_invalid',
+    'new_dead',
+
+    'closed_new',
+    'in_progress_new',
+    'suspended_new',
+    'invalid_new',
+    'dead_new',
+
+    'closed_invalid',
+    'invalid_closed',
+    'invalid_new',)
+
 ROLES_CAPABILITIES_MAP = {
-    'admin': {'default': 'crud'}, 
+    'admin': {'default': 'crud'},
     'project_admin': {
         'default': 'r',
         'user': 'crud',
@@ -60,7 +91,7 @@ ROLES_CAPABILITIES_MAP = {
         'milestone': 'crud',
         'order': 'r',
         'customer': 'r',
-    }, 
+    },
     'task_admin': {
         'default': 'r',
         'user': 'r',
@@ -69,14 +100,14 @@ ROLES_CAPABILITIES_MAP = {
         'milestone': 'r',
         'order': 'r',
         'customer': 'r',
-    }, 
-    'guest': {'default': 'r'}, 
-    'suspended': {'default': ''}, 
-}
+    },
+    'guest': {'default': 'r'},
+    'suspended': {'default': ''}, }
 
-_db_session = None
 
 class TrackerModelView(ModelView):
+
+    named_filter_urls = True
 
     can_view_details = True
     can_export = True
@@ -88,7 +119,24 @@ class TrackerModelView(ModelView):
     create_template = 'admin/create.html'
     edit_template = 'admin/edit.html'
 
-    def has_capabilities(self, role, table_name, operation='r'):
+    column_searchable_list = (
+        # ~ 'name',
+        'description',
+    )
+
+    def display_time_to_local_tz(self, context, obj, name):   # pylint: disable=unused-argument,no-self-use
+
+        value = getattr(obj, name)
+        value = value.replace(tzinfo=timezone.utc).astimezone().strftime("%d %b %Y (%I:%M:%S:%f %p) %Z")
+        return Markup(value)
+
+    column_formatters = {
+        'date_created': display_time_to_local_tz,
+        'date_modified': display_time_to_local_tz,
+    }
+
+    @staticmethod
+    def has_capabilities(role, table_name, operation='r'):
 
         ret = False
         cap = ROLES_CAPABILITIES_MAP[role].get(table_name)
@@ -97,12 +145,8 @@ class TrackerModelView(ModelView):
         if operation in cap:
             ret = True
 
-        logging.warning("role:{}, table_name:{}, operation:{}, ret:{}".format(role, table_name, operation, ret))
+        # ~ logging.warning("role:{}, table_name:{}, operation:{}, ret:{}".format(role, table_name, operation, ret))
 
-        return ret
-
-    def on_model_change(self, form, obj, is_created):
-        ret = super().on_model_change(form, obj, is_created)
         return ret
 
     def is_accessible(self):
@@ -113,6 +157,71 @@ class TrackerModelView(ModelView):
                 ret = True
         return ret
 
+    def on_model_change(self, form_, obj, is_created):
+        obj.date_modified = datetime.utcnow()
+        ret = super(TrackerModelView, self).on_model_change(form_, obj, is_created)
+        return ret
+
+
+class WorkTimeView(TrackerModelView):
+
+    # ~ create_modal = True
+    # ~ edit_modal = True
+    can_edit = False
+
+    column_list = (
+        'date_created',
+        'description',
+        'duration',
+        'user',
+        'task',
+    )
+
+    column_labels = dict(date_created='Date')
+
+    form_excluded_columns = (
+        # ~ 'date_created',
+        'date_modified',
+    )
+
+    form_args = {
+        'date_created': {
+            'label': 'date',
+        },
+    }
+
+    column_filters = (
+        'date_created',
+        'description',
+        'user.name',
+        'task.name',
+    )
+
+    def create_form(self):
+
+        session = MODELS_GLOBAL_CONTEXT['session']
+
+        data = {
+            'date_created': datetime.utcnow(),
+            'date_modified': datetime.utcnow(),
+            'duration': 0.0,
+            'user':  session.query(User).filter(User.id == flask_login.current_user.id).first(),
+            'task':  session.query(Task).filter(Task.name == flask_session.get('selected_task_name')).first(),
+        }
+
+        wt = WorkTime(**data)
+
+        form = self.edit_form(obj=wt)
+        return form
+
+    def get_edit_form(self):
+
+        form_ = super().get_edit_form()
+        form_.description = fields.TextAreaField('* description *', [validators.optional(), validators.length(max=200)],
+                                             render_kw={'rows': '4'})
+
+        return form_
+
 
 class OrderView(TrackerModelView):
 
@@ -121,12 +230,14 @@ class OrderView(TrackerModelView):
         'project',
     )
 
+
 class MilestoneView(TrackerModelView):
 
     column_editable_list = (
         'project',
         # ~ 'due_date',
     )
+
 
 class ProjectView(TrackerModelView):
 
@@ -141,10 +252,20 @@ class ProjectView(TrackerModelView):
         'orders',
     )
 
+
 class UserView(TrackerModelView):
 
+    can_create = False
+    can_delete = False
+
+    form_args = {
+        'email': {
+            'validators': [validators.Email()],
+        },
+    }
+
     form_choices = {
-        'role': [(k, k) for k in ROLES_CAPABILITIES_MAP.keys()],
+        'role': [(k, k) for k in ROLES_CAPABILITIES_MAP],
     }
 
     column_list = (
@@ -153,6 +274,11 @@ class UserView(TrackerModelView):
         'role',
         'worktimes',
         'assigned_tasks',
+        'followed',
+    )
+
+    column_editable_list = (
+        'followed',
     )
 
     column_details_exclude_list = (
@@ -167,32 +293,43 @@ class UserView(TrackerModelView):
         'assigned_tasks',
     )
 
-class TaskView(TrackerModelView):
+    def display_worked_hours(self, context, obj, name):   # pylint: disable=unused-argument
 
-    # ~ edit_template = 'admin/task_edit.html'
-    # ~ edit_template = 'task_editor_page.html'
+        total = sum([h.duration for h in obj.worktimes if h.date_modified <= datetime.utcnow() ])
+        return Markup("%.2f"%total)
+
+    column_formatters = TrackerModelView.column_formatters
+
+    column_formatters.update({
+        'worktimes': display_worked_hours,
+    })
+
+    column_labels = dict(worktimes='Worked Hours in This Week')
+
+class TaskView(TrackerModelView):
 
     can_delete = False
 
     form_args = {
-        'content': {
-            'label': 'content',
+        'status': {
+            'description': 'NOTE: forbidden status transitions:{}'.format(TASK_STATUSES_FORBIDDEN_TRANSITIONS),
         },
     }
 
     form_choices = {
         'department': DEPARTMENTS,
-    }
-
-    form_widget_args = {
+        'status': TASK_STATUSES,
     }
 
     column_list = (
         'name',
+        'status',
         'milestone',
         'order',
-        'related_tasks',
+        'parent',
+        # ~ 'related_tasks',
         'assignee',
+        'followers',
         'worktimes',
     )
 
@@ -202,44 +339,62 @@ class TaskView(TrackerModelView):
         # ~ 'parent_id',
         # ~ 'parent.name',
         # ~ 'assignee_id',
-        'related_tasks',
+        # ~ 'related_tasks',
+        'assignee',
+        'followers',
+        # ~ 'status',
     )
 
     column_filters = (
         'name',
         'date_modified',
         'description',
+        'assignee.name',
         'order.name',
         'order.customer',
         'milestone.project',
         'milestone.name',
-        # ~ 'product.brand',
+        'status',
+        'followers',
     )
 
     form_columns = (
         'name',
         'description',
+        'assignee',
+        'status',
         'department',
         'milestone',
         'order',
-        'related_tasks',
-        'assignee',
+        'parent',
+        'followers',
+        # ~ 'related_tasks',
         'content',
     )
 
-    # ~ form_excluded_columns = (
-        # ~ 'date_created',
-        # ~ 'date_modified',
-        # ~ 'created_by',
-        # ~ 'worktimes',
-        # ~ 'content',
-    # ~ )
+    column_labels = dict(worktimes='Total Worked Hours')
+
+    def display_worked_hours(self, context, obj, name):   # pylint: disable=unused-argument
+
+        total = sum([h.duration for h in obj.worktimes])
+        return Markup("%.2f"%total)
+
+    column_formatters = TrackerModelView.column_formatters
+
+    column_formatters.update({
+        'worktimes': display_worked_hours,
+    })
 
     def get_edit_form(self):
-        form = super(TaskView, self).get_edit_form()
-        form.content = fields.TextAreaField(u'* content *', [validators.optional(), validators.length(max=5000)], render_kw={'rows': '20'})
-        form.preview_content = fields.BooleanField(u'* preview content *', [], render_kw={})
-        return form
+
+        form_ = super(TaskView, self).get_edit_form()
+
+        cnt_description = 'NOTE: you can use Markdown syntax (https://daringfireball.net/projects/markdown/syntax). Use preview button to see what you get.'
+        form_.content = fields.TextAreaField('* content *', [validators.optional(), validators.length(max=1000)],
+                                             description=cnt_description, render_kw={'rows': '16'})
+        form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={'width': '1600'})
+
+        return form_
 
     @contextfunction
     def get_detail_value(self, context, model, name):
@@ -249,8 +404,43 @@ class TaskView(TrackerModelView):
             ret = Markup(ret)
         return ret
 
+    def on_model_change(self, form_, obj, is_created):
+
+        if is_created:
+            if not (hasattr(form_, 'created_by') and form_.created_by and form_.created_by.data):
+                obj.created_by = flask_login.current_user.name
+            if not (hasattr(form_, 'assignee') and form_.assignee and form_.assignee.data):
+                session = MODELS_GLOBAL_CONTEXT['session']
+                obj.assignee = session.query(User).filter(User.name == 'anonymous').first()
+
+        if obj == obj.parent:
+            obj.parent = None
+            # ~ flash('NOTE: cannot make task {} parent of itself.'.format(obj.name))
+            msg = 'NOTE: cannot make task {} parent of itself.'.format(obj.name)
+            raise validators.ValidationError(msg)
+
+        if hasattr(form_, 'status') and form_.status:
+            prev_ = form_.status.object_data
+            next_ = form_.status.data
+
+            if "{}_{}".format(prev_, next_) in TASK_STATUSES_FORBIDDEN_TRANSITIONS:
+                # ~ flash('cannot move status of task {} from:{} to {}.'.format(obj.name, prev_, next_), 'error')
+                msg = 'cannot move status of task {} from:{} to {}.'.format(obj.name, prev_, next_)
+                raise validators.ValidationError(msg)
+
+            if next_ in ('open', 'in_progress'):
+                if not obj.assignee or obj.assignee.name == 'anonymous':
+                    # ~ flash('task {} must have an assignee, to be {}.'.format(obj.name, next_), 'error')
+                    msg = 'task {} must have a known assignee, to be {}.'.format(obj.name, next_)
+                    raise validators.ValidationError(msg)
+
+        ret = super(TaskView, self).on_model_change(form, obj, is_created)
+        return ret
+
 
 class TrackerAdminResources(flask_admin.AdminIndexView):
+
+    app = None
 
     @flask_admin.expose("/")
     @flask_admin.expose("/home")
@@ -260,23 +450,44 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         if not flask_login.current_user.is_authenticated:
             return redirect(url_for('.login'))
 
+        # ~ url_ = "/task/?flt2_assignee_user_name_equals={}".format(flask_login.current_user.name) 
+        # ~ return redirect(url_)
+
+        session = MODELS_GLOBAL_CONTEXT['session']
+
         logging.warning("self._template:{}".format(self._template))
+
+        today = datetime.now().date()
+        start_of_the_week = today - timedelta(days=today.weekday())
+        start_of_the_week = start_of_the_week.strftime("%Y-%m-%d+00:00:00")
+        start_of_the_week = Markup(start_of_the_week)
+        # ~ 2019-12-01+16%3A54%3A00
+        
         ctx = {
+            'assigned_task_names': [t.name for t in session.query(Task).filter(Task.assignee_id == flask_login.current_user.id).limit(MAX_ASSIGNED_TAX_PER_USER)],
+            'filtered_views': [
+                ('tasks assigned to me', '/task/?flt2_assignee_user_name_equals={}'.format(flask_login.current_user.name)),
+                ('my open tasks', '/task/?flt0_status_equals=open&flt3_assignee_user_name_equals={}'.format(flask_login.current_user.name)),
+                ('my tasks in progress', '/task/?flt0_status_equals=in_progress&flt3_assignee_user_name_equals={}'.format(flask_login.current_user.name)),
+                ('tasks I follow', '/task/?flt2_user_name_equals={}'.format(flask_login.current_user.name)),
+                ('my worked hrs in this week', '/worktime/?flt2_date_greater_than={}&flt6_user_user_name_equals={}'.format(start_of_the_week, flask_login.current_user.name)),
+                ('all tasks in progress', '/task/?flt0_status_equals=in_progress'),
+            ]
         }
         return self.render(self._template, **ctx)
 
     @flask_admin.expose('/login/', methods=('GET', 'POST'))
     def login(self):
 
-        logging.warning("")
+        # ~ logging.warning("")
 
         # handle user login
-        form = LoginForm(request.form)
+        form_ = LoginForm(request.form)
 
-        logging.warning("form:{}".format(form))
+        logging.warning("form_:{}".format(form_))
 
-        if flask_admin.helpers.validate_form_on_submit(form):
-            user = form.get_user()
+        if flask_admin.helpers.validate_form_on_submit(form_):
+            user = form_.get_user()
             flask_login.login_user(user)
             logging.warning("user.name:{}".format(user.name))
 
@@ -285,57 +496,79 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         if flask_login.current_user.is_authenticated:
             return redirect(url_for('.index'))
 
-        self._template_args['form'] = form
+        self._template_args['form'] = form_
 
         return super(TrackerAdminResources, self).index()
 
-
     @flask_admin.expose('/logout/')
-    def logout(self):
+    def logout(self): # pylint: disable=no-self-use
         flask_login.logout_user()
         return redirect(url_for('.index'))
 
+    @flask_admin.expose('/add_a_working_time_slot', methods=('GET', ))
+    def add_a_working_time_slot(self):
 
-# Define login and registration forms (for flask-login)
+        if not flask_login.current_user.is_authenticated:
+            return redirect(url_for('.login'))
+
+        flask_session['selected_task_name'] = request.args.get('selected_task')
+        url = "/worktime/new/"
+        return redirect(url)
+
+    @flask_admin.expose('/markdown_to_html', methods=('POST', ))
+    def markdown_to_html(self):
+
+        try:
+            # ~ msg = ''
+            content = request.json.get('content')
+            msg = markdown2.markdown(content)
+        except Exception as exc:
+            msg = "ERROR: {}".format(exc)
+            logging.error(traceback.format_exc())
+
+        ret = self.app.response_class(
+            response=Markup(msg),
+            mimetype='text'
+        )
+        return ret
+
+
 class LoginForm(form.Form):
     login = fields.StringField(validators=[validators.required()])
     password = fields.PasswordField(validators=[validators.required()])
 
     def validate_login(self, field):
-        
+
         logging.warning("self.login.data:{}".format(self.login.data))
-        
+
         user = self.get_user()
 
-        logging.warning("user:{}".format(user))
+        logging.warning("user:{}, field:{}".format(user, field))
 
         if user is None:
             raise validators.ValidationError('Invalid user')
 
         # we're comparing the plaintext pw with the the hash from the db
         if not check_password_hash(user.password, self.password.data):
-        # to compare plain text passwords use
-        # if user.password != self.password.data:
+            # to compare plain text passwords use
+            # if user.password != self.password.data:
             raise validators.ValidationError('Invalid password')
 
     def get_user(self):
-        global _db_session
-        return _db_session.query(User).filter_by(name=self.login.data).first()
+        session = MODELS_GLOBAL_CONTEXT['session']
+        return session.query(User).filter_by(name=self.login.data).first()
 
 
 def init_admin(app, db):
 
-    global _db_session
-    _db_session = db.session
-
     login_manager = flask_login.LoginManager()
     login_manager.init_app(app)
 
-    # Create user loader function
     @login_manager.user_loader
-    def load_user(user_id):
-        logging.warning("user_id:{}".format(user_id))
-        return _db_session.query(User).get(user_id)
+    def load_user(user_id):    # pylint: disable=unused-variable
+        # ~ logging.warning("user_id:{}".format(user_id))
+        session = MODELS_GLOBAL_CONTEXT['session']
+        return session.query(User).get(user_id)
 
     index_view_ = TrackerAdminResources(url='/')
     index_view_.app = app
@@ -348,5 +581,6 @@ def init_admin(app, db):
     admin_.add_view(OrderView(Order, db.session))
     admin_.add_view(TrackerModelView(Customer, db.session, category="admin"))
     admin_.add_view(UserView(User, db.session, category="admin"))
+    admin_.add_view(WorkTimeView(WorkTime, db.session, category="admin"))
 
     return admin_

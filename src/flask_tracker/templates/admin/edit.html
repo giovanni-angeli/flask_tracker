@@ -26,21 +26,67 @@
 
     <script type="text/javascript" >
         var refresh_preview_content = function(result, status, xhr){
-            document.getElementById('preview_content').innerHTML = result.responseText;
+            console.log("result.responseText: " + result.responseText);
+            var url = "";
+            var title = "Task content preview";
+            var options = "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,zoomable=yes,width=800,height=600,top="+(200)+",left="+(240);
+            var html = '';
+            
+            html += '<html>';
+            html += '<head>';
+            html += '<title>Task - Preview</title>';
+            html += '<meta charset="UTF-8">';
+            html += '<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">';
+            html += '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
+
+            html += '<link href="/static/admin/bootstrap/bootstrap3/swatch/default/bootstrap.min.css?v=3.3.5" rel="stylesheet">';
+            html += '<link href="/static/admin/bootstrap/bootstrap3/css/bootstrap-theme.min.css?v=3.3.5" rel="stylesheet">';
+
+
+            html += '</head>';
+            html += '<style>';
+            html += '.body { ';
+            html += '      display: flex;';
+            html += '}';
+            html += '.preview_controls { ';
+            html += '      display: flex;';
+            html += '      justify-content: center;'; 
+            html += '      align-content: center;';
+            html += '      border: 1px solid #CCCCCC;';
+            html += '      background-color: #EEEEEE;';
+            html += '}';
+            html += '</style>';
+            html += '<body>';
+            html += '<div class="container">';
+            html += '<div class="preview_controls"><h4>Task content Preview:</h4></div>';
+            html += "<a href='https://daringfireball.net/projects/markdown/syntax'> Markdown syntax doc </a>";
+            html += "<hr></hr>";
+            html += '<div class="preview_controls"><button onclick="window.close();">CLOSE</button></div>';
+            html += "<hr></hr>";
+            html += "<div>";
+            html += result.responseText;
+            html += "</div>";
+            html += '</div>';
+            html += "</body>";
+            html += '</html>';
+            var win = window.open(url, title, options);
+            win.document.body.innerHTML = html;
         }
         var preview_content = function() {
             var e = document.getElementById("content");
-            console.log("content: " + e.text);
-            var data = {'content': e.text};
+//~             console.log("content: " + e.text);
+//~             console.log("content: " + e.innerHTML);
+            console.log("content: " + e.value);
+            var data = {'content': e.value};
             $.ajax({
-                data: data,
+                data: JSON.stringify(data),
                 dataType: "json",
                 success: refresh_preview_content,
                 error: refresh_preview_content,
                 contentType: "application/json",
                 timeout: 5000,
-                url: '/admin/preview_task_content',
-                method: POST
+                url: '/markdown_to_html',
+                method: 'POST'
             });
         }
         $(document).ready(function() {
