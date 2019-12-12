@@ -50,3 +50,10 @@ run:
 
     $ ${FT_VENV_ROOT}/bin/flask_tracker -c ${FT_PROJECT_ROOT}/conf/flask_conf.py
 
+open:
+
+    $ firefox localhost:12012
+    
+login as: 
+
+    admin, admin
