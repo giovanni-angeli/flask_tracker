@@ -26,9 +26,10 @@ It is buitl using (see INSTALL_REQUIRES in setup.py fpr a complete dependency li
 
 set working paths:
 
-    $ export FT_PROJECT_ROOT=<your-project-sources-path>
-    $ export FT_RUNDATA_ROOT=<your-project-data-path>
-    $ export FT_VENV_ROOT=<your-virtualenv-root-path>
+    $ export FT_PROJECT_ROOT=/opt/PROJECTS/flask_tracker
+    $ export FT_RUNCONF_ROOT=/opt/flask_tracker/conf
+    $ export FT_VENV_ROOT=/opt/flask_tracker/venv
+
 
 create virtualenv:
 
@@ -46,13 +47,21 @@ OR install in edit mode, i.e. development mode:
 
     $ (. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT} && pip install -e .)
 
-run:
+init the application, i.e. clone a conf file:
 
-    $ ${FT_VENV_ROOT}/bin/flask_tracker -c ${FT_PROJECT_ROOT}/conf/flask_conf.py
+    $ cp ${FT_PROJECT_ROOT}/conf/flask_conf.py ${FT_RUNCONF_ROOT}/
 
-open:
+edit your conf file:
 
-    $ firefox localhost:12012
+    $ <your-preferred-code-editor> ${FT_RUNCONF_ROOT}/flask_conf.py
+
+run the server:
+
+    $ ${FT_VENV_ROOT}/bin/flask_tracker -c ${FT_RUNCONF_ROOT}/flask_conf.py
+
+open the browser:
+
+    $ firefox <conf-host>:<conf-port>
     
 login as: 
 

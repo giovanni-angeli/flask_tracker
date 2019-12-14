@@ -6,7 +6,6 @@
 # pylint: disable=invalid-name
 # pylint: disable=broad-except
 
-
 import os
 import uuid
 import logging
@@ -15,14 +14,9 @@ from datetime import datetime
 
 from werkzeug.security import generate_password_hash
 
-from sqlalchemy import Table, event         # pylint: disable=import-error
+from sqlalchemy import event         # pylint: disable=import-error
 
 import flask_sqlalchemy              # pylint: disable=import-error
-
-# ~ from sqlalchemy import Table, Column, Integer, ForeignKey
-# ~ from sqlalchemy.orm import relationship
-# ~ from sqlalchemy.ext.declarative import declarative_base
-
 
 sqlalchemy_db_ = flask_sqlalchemy.SQLAlchemy()
 sqlalchemy_session_ = None
@@ -32,45 +26,8 @@ MODELS_GLOBAL_CONTEXT = {
     'db': sqlalchemy_db_,
     'session': sqlalchemy_db_.session,
     'to_be_deleted_object_list': set([]),
-    'table_name2model_classes_map': {},}
+    'table_name2model_classes_map': {}, }
 
-SAMPLE_CONTENT = """
-
-#   Title 1
-
-##  Title 2
-
-### Title 3
-
-####  Title 4
-____________
-
-o_list:
-
-1. first
-1. secodn 
-1. third
-
-____________
-
-u_list:
-
-* first
-* secodn 
-* third
-
-and some quoting:
-
-> ## This is a header.
-> 
-> 1.   This is the first list item.
-> 2.   This is the second list item.
-> 
-> Here's some example code:
-> 
->     return shell_exec("echo $input | $markdown_script");
-
-"""
 
 def scan_for_models() -> dict:
 
@@ -102,7 +59,62 @@ def generate_id():
     return str(uuid.uuid4())
 
 
-def populate_default_db(app, db):
+def insert_admin_user_in_db(app, db):
+
+    args = {'name': 'admin', 
+        'password': generate_password_hash('admin'), 
+        'role': 'admin', 
+        'email': 'admin@gmail.com'}
+
+    with app.app_context():
+
+        try:
+            obj = User(**args)
+            db.session.add(obj)
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            logging.error(exc)
+
+def populate_sample_db(app, db, N=20):
+
+    SAMPLE_CONTENT = """
+
+#   Title 1
+
+##  Title 2
+
+### Title 3
+
+####  Title 4
+____________
+
+o_list:
+
+1. first
+1. secodn
+1. third
+
+____________
+
+u_list:
+
+* first
+* secodn
+* third
+
+and some quoting:
+
+> ## This is a header.
+>
+> 1.   This is the first list item.
+> 2.   This is the second list item.
+>
+> Here's some example code:
+>
+>     return shell_exec("echo $input | $markdown_script");
+
+"""
 
     fixtes = [
         (Customer, {'name': 'Alfa'}),
@@ -110,13 +122,12 @@ def populate_default_db(app, db):
         (Project, {'name': 'Thor'}),
         (Project, {'name': 'Desk'}),
         (Project, {'name': 'ColorLab'}),
-        (Milestone, {'name': '2020.q1'}),
+        (Milestone, {'name': '2020.q4'}),
         (Milestone, {'name': '2020.q2'}),
         (Milestone, {'name': '2020.q2'}),
         (Milestone, {'name': '2020.q3'}),
-        (Order, {'name': 'O_001'}),
+        (Order, {'name': 'O_0010'}),
         (Order, {'name': 'O_002'}),
-        (User, {'name': 'admin', 'password': generate_password_hash('admin'), 'role': 'admin', 'email': 'admin@gmail.com'}),
         (User, {'name': 'test', 'password': generate_password_hash('test'), 'role': 'guest', 'email': 'test@gmail.com'}),
         (User, {'name': 'anonymous', 'password': generate_password_hash('no'), 'role': 'guest', 'email': ''}),
     ]
@@ -124,12 +135,13 @@ def populate_default_db(app, db):
     import random
     sts_ = ['new', 'open', 'in_progress', 'suspended', 'closed', 'invalid', 'dead']
 
-    for i in range(100):
-        t = (Task, {'name': 'T_%03d'%i, 'content': SAMPLE_CONTENT, 'status': random.choice(sts_)})
+    for i in range(N):
+        t = (Task, {'name': 'T_%03d' % i, 'content': SAMPLE_CONTENT, 'status': random.choice(sts_)})
         fixtes.append(t)
 
-    for i in range(100):
-        u = (User, {'name': 'U_%03d'%i, 'password': generate_password_hash('U_%03d@alfa'%i), 'role': 'guest', 'email': 'U_%03d@alfa.com'%i})
+    for i in range(N):
+        u = (User, {'name': 'U_%03d' % i, 'password': generate_password_hash(
+            'U_%03d@alfa' % i), 'role': 'guest', 'email': 'U_%03d@alfa.com' % i})
         fixtes.append(u)
 
     MODELS_GLOBAL_CONTEXT['check_limit_before_insert_disabled'] = True
@@ -141,7 +153,6 @@ def populate_default_db(app, db):
                 obj = klass(**args)
                 db.session.add(obj)
                 db.session.commit()
-                print("*")
             except Exception as exc:
                 db.session.rollback()
                 logging.info(exc)
@@ -150,22 +161,22 @@ def populate_default_db(app, db):
     MODELS_GLOBAL_CONTEXT['check_limit_before_insert_disabled'] = False
 
 
-def reset_db(app, db, force_reset=False):
+def reset_db(app, db):
 
-    # ~ _dir = os.path.realpath(os.getcwd())
-    # ~ database_path = os.path.join(_dir, app.config['DATABASE_FILE'])
-    database_path = app.config['DATABASE_FILE']
+    logging.warning("resetting db")
 
-    if not os.path.exists(database_path) or force_reset:
-        with app.app_context():
-            db.drop_all()
-            db.create_all()
-            db.session.commit()
-
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        db.session.commit()
 
 followings = sqlalchemy_db_.Table('followings',
-    sqlalchemy_db_.Column('user_id', sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('user.id'), primary_key=True),
-    sqlalchemy_db_.Column('task_id', sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('task.id'), primary_key=True))
+                                  sqlalchemy_db_.Column(
+                                      'user_id',
+                                      sqlalchemy_db_.Unicode,
+                                      sqlalchemy_db_.ForeignKey('user.id'),
+                                      primary_key=True),
+                                  sqlalchemy_db_.Column('task_id', sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('task.id'), primary_key=True))
 
 
 class BaseModel(object):                         # pylint: disable=too-few-public-methods
@@ -201,6 +212,7 @@ class BaseModel(object):                         # pylint: disable=too-few-publi
 
     id_short = property(get_id_short)
 
+
 class NamedModel(BaseModel):
 
     db = MODELS_GLOBAL_CONTEXT['db']
@@ -217,58 +229,34 @@ class NamedModel(BaseModel):
 class Project(NamedModel, sqlalchemy_Model):  # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
-
-    milestones = db.relationship('Milestone', backref='project')
-    orders = db.relationship('Order', backref='project')
-
+    tasks = db.relationship('Task', backref='project')
 
 class Customer(NamedModel, sqlalchemy_Model):   # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
-
     orders = db.relationship('Order', backref='customer')
-
 
 class Order(NamedModel, sqlalchemy_Model):    # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
-
     tasks = db.relationship('Task', backref='order')
-
-    project_id = db.Column(db.Unicode, db.ForeignKey('project.id'))
-
     customer_id = db.Column(db.Unicode, db.ForeignKey('customer.id'))
-
     def __str__(self):
         customer_name = (self.customer.name if self.customer else 'none')
-        project_name = (self.project.name if self.project else 'none')
-        return "{}:{}.{}".format(project_name, customer_name, self.name)
-
+        return "{}.{}".format(customer_name, self.name)
 
 class Milestone(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
-
     due_date = db.Column(db.DateTime)
-
     tasks = db.relationship('Task', backref='milestone')
-
-    project_id = db.Column(db.Unicode, db.ForeignKey('project.id'))
-
-    def __str__(self):
-        prj_name = (self.project.name if self.project else 'none')
-        return "{}.{}".format(prj_name, self.name)
-
 
 class WorkTime(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
-
     task_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
     user_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
-
     duration = db.Column(db.Float, default=0.00, doc='hours')
-
 
 class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
@@ -316,13 +304,13 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
 
     planned_time = db.Column(db.Float, default=0.00, doc='hours')
 
+    project_id = db.Column(db.Unicode, db.ForeignKey('project.id'))
     order_id = db.Column(db.Unicode, db.ForeignKey('order.id'))
     milestone_id = db.Column(db.Unicode, db.ForeignKey('milestone.id'))
 
     assignee_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
 
     parent_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
-    # ~ related_tasks = db.relationship("Task", backref='parent')
     parent = db.relationship("Task", remote_side=[id])
 
 
@@ -357,24 +345,29 @@ def install_listeners():
 
     db = MODELS_GLOBAL_CONTEXT['db']
 
-    event.listen(db.session, 'before_flush', do_delete_pending_objects)
+    db.event.listen(db.session, 'before_flush', do_delete_pending_objects)
 
     for cls in scan_for_models().values():
         if cls.row_count_limt > 0:
-            event.listen(cls, 'before_insert', check_limit_before_insert)
+            db.event.listen(cls, 'before_insert', check_limit_before_insert)
 
 
 def init_db(app):
 
-    global sqlalchemy_session_      # pylint: disable=global-statement
-    global sqlalchemy_db_           # pylint: disable=global-statement
-
-    MODELS_GLOBAL_CONTEXT['db'].init_app(app)
+    db = MODELS_GLOBAL_CONTEXT['db']
+    db.init_app(app)
 
     install_listeners()
 
-    reset_db(app, MODELS_GLOBAL_CONTEXT['db'], force_reset=False)
-    if os.environ.get("FT_POPULATE_DEFAULT_DB"):
-        populate_default_db(app, MODELS_GLOBAL_CONTEXT['db'])
+    force_reset = app.config.get('FORCE_RESET_DB')
+    db_path = app.config['DATABASE_FILE']
+    if not os.path.exists(db_path) or force_reset:
+        reset_db(app, db)
 
-    return MODELS_GLOBAL_CONTEXT['db']
+    if app.config.get("INSERT_ADMIN_USER_IN_DB"):
+        insert_admin_user_in_db(app, db)
+
+    if app.config.get("POPULATE_SAMPLE_DB"):
+        populate_sample_db(app, db)
+
+    return db

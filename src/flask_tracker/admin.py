@@ -59,8 +59,7 @@ TASK_STATUSES = [
     ('in_progress', 'In Progress'),
     ('suspended', 'Suspended'),
     ('closed', 'Closed'),
-    ('invalid', 'Invalid'),
-    ('dead', 'Dead'), ]
+    ('invalid', 'Invalid')]
 
 TASK_STATUSES_FORBIDDEN_TRANSITIONS = (
 
@@ -127,7 +126,8 @@ class TrackerModelView(ModelView):
     def display_time_to_local_tz(self, context, obj, name):   # pylint: disable=unused-argument,no-self-use
 
         value = getattr(obj, name)
-        value = value.replace(tzinfo=timezone.utc).astimezone().strftime("%d %b %Y (%I:%M:%S:%f %p) %Z")
+        # ~ value = value.replace(tzinfo=timezone.utc).astimezone().strftime("%d %b %Y (%I:%M:%S:%f %p) %Z")
+        value = value.replace(tzinfo=timezone.utc).astimezone().strftime("%d %b %Y (%I:%M:%S %p)")
         return Markup(value)
 
     column_formatters = {
@@ -195,61 +195,51 @@ class WorkTimeView(TrackerModelView):
         'description',
         'user.name',
         'task.name',
+        'task',
     )
-
-    def create_form(self):
-
-        session = MODELS_GLOBAL_CONTEXT['session']
-
-        data = {
-            'date_created': datetime.utcnow(),
-            'date_modified': datetime.utcnow(),
-            'duration': 0.0,
-            'user':  session.query(User).filter(User.id == flask_login.current_user.id).first(),
-            'task':  session.query(Task).filter(Task.name == flask_session.get('selected_task_name')).first(),
-        }
-
-        wt = WorkTime(**data)
-
-        form = self.edit_form(obj=wt)
-        return form
 
     def get_edit_form(self):
 
         form_ = super().get_edit_form()
         form_.description = fields.TextAreaField('* description *', [validators.optional(), validators.length(max=200)],
-                                             render_kw={'rows': '4'})
+                                                 render_kw={'rows': '4'})
 
         return form_
+
+    def on_model_change(self, form_, obj, is_created):
+
+        ret = super(WorkTimeView, self).on_model_change(form, obj, is_created)
+        return ret
+
 
 
 class OrderView(TrackerModelView):
 
     column_editable_list = (
         'customer',
-        'project',
+        # ~ 'project',
     )
 
 
 class MilestoneView(TrackerModelView):
 
     column_editable_list = (
-        'project',
-        # ~ 'due_date',
+        # ~ 'project',
+        'due_date',
     )
 
 
 class ProjectView(TrackerModelView):
 
     column_editable_list = (
-        'milestones',
-        'orders',
+        # ~ 'milestones',
+        # ~ 'orders',
     )
 
     column_list = (
         'name',
-        'milestones',
-        'orders',
+        # ~ 'milestones',
+        # ~ 'orders',
     )
 
 
@@ -295,8 +285,8 @@ class UserView(TrackerModelView):
 
     def display_worked_hours(self, context, obj, name):   # pylint: disable=unused-argument
 
-        total = sum([h.duration for h in obj.worktimes if h.date_modified <= datetime.utcnow() ])
-        return Markup("%.2f"%total)
+        total = sum([h.duration for h in obj.worktimes if h.date_modified <= datetime.utcnow()])
+        return Markup("%.2f" % total)
 
     column_formatters = TrackerModelView.column_formatters
 
@@ -305,6 +295,7 @@ class UserView(TrackerModelView):
     })
 
     column_labels = dict(worktimes='Worked Hours in This Week')
+
 
 class TaskView(TrackerModelView):
 
@@ -327,7 +318,7 @@ class TaskView(TrackerModelView):
         'milestone',
         'order',
         'parent',
-        # ~ 'related_tasks',
+        'date_created',
         'assignee',
         'followers',
         'worktimes',
@@ -352,7 +343,6 @@ class TaskView(TrackerModelView):
         'assignee.name',
         'order.name',
         'order.customer',
-        'milestone.project',
         'milestone.name',
         'status',
         'followers',
@@ -377,7 +367,7 @@ class TaskView(TrackerModelView):
     def display_worked_hours(self, context, obj, name):   # pylint: disable=unused-argument
 
         total = sum([h.duration for h in obj.worktimes])
-        return Markup("%.2f"%total)
+        return Markup("%.2f" % total)
 
     column_formatters = TrackerModelView.column_formatters
 
@@ -434,6 +424,9 @@ class TaskView(TrackerModelView):
                     msg = 'task {} must have a known assignee, to be {}.'.format(obj.name, next_)
                     raise validators.ValidationError(msg)
 
+            if next_ in ('new', 'closed', 'invalid'):
+                obj.assignee = session.query(User).filter(User.name == 'anonymous').first()
+
         ret = super(TaskView, self).on_model_change(form, obj, is_created)
         return ret
 
@@ -450,7 +443,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         if not flask_login.current_user.is_authenticated:
             return redirect(url_for('.login'))
 
-        # ~ url_ = "/task/?flt2_assignee_user_name_equals={}".format(flask_login.current_user.name) 
+        # ~ url_ = "/task/?flt2_assignee_user_name_equals={}".format(flask_login.current_user.name)
         # ~ return redirect(url_)
 
         session = MODELS_GLOBAL_CONTEXT['session']
@@ -462,17 +455,27 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         start_of_the_week = start_of_the_week.strftime("%Y-%m-%d+00:00:00")
         start_of_the_week = Markup(start_of_the_week)
         # ~ 2019-12-01+16%3A54%3A00
-        
+        user_name = flask_login.current_user.name
+        assigned_task_names = [t.name for t in session.query(Task).filter(
+            Task.assignee_id == flask_login.current_user.id).limit(MAX_ASSIGNED_TAX_PER_USER)]
+        filtered_views = [
+            ('all the tasks assigned to <b>{}</b>'.format(user_name),
+             '/task/?flt2_assignee_user_name_equals={}'.format(user_name)),
+            ('open tasks assigned to <b>{}</b>'.format(user_name),
+             '/task/?flt0_status_equals=open&flt3_assignee_user_name_equals={}'.format(user_name)),
+            ('tasks assigned to <b>{}</b>, in progress'.format(user_name),
+             '/task/?flt0_status_equals=in_progress&flt3_assignee_user_name_equals={}'.format(user_name)),
+            ('tasks followed by <b>{}</b>'.format(user_name),
+             '/task/?flt2_user_name_equals={}'.format(user_name)),
+            ('hours worked by <b>{}</b>, in this week'.format(user_name),
+             '/worktime/?flt2_date_greater_than={}&flt6_user_user_name_equals={}'.format(start_of_the_week, user_name)),
+            ('all tasks in progress',
+             '/task/?flt0_status_equals=in_progress'),
+        ]    
+
         ctx = {
-            'assigned_task_names': [t.name for t in session.query(Task).filter(Task.assignee_id == flask_login.current_user.id).limit(MAX_ASSIGNED_TAX_PER_USER)],
-            'filtered_views': [
-                ('tasks assigned to me', '/task/?flt2_assignee_user_name_equals={}'.format(flask_login.current_user.name)),
-                ('my open tasks', '/task/?flt0_status_equals=open&flt3_assignee_user_name_equals={}'.format(flask_login.current_user.name)),
-                ('my tasks in progress', '/task/?flt0_status_equals=in_progress&flt3_assignee_user_name_equals={}'.format(flask_login.current_user.name)),
-                ('tasks I follow', '/task/?flt2_user_name_equals={}'.format(flask_login.current_user.name)),
-                ('my worked hrs in this week', '/worktime/?flt2_date_greater_than={}&flt6_user_user_name_equals={}'.format(start_of_the_week, flask_login.current_user.name)),
-                ('all tasks in progress', '/task/?flt0_status_equals=in_progress'),
-            ]
+            'assigned_task_names': assigned_task_names,
+            'filtered_views': [(Markup(a), b) for a, b in filtered_views]
         }
         return self.render(self._template, **ctx)
 
@@ -501,7 +504,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return super(TrackerAdminResources, self).index()
 
     @flask_admin.expose('/logout/')
-    def logout(self): # pylint: disable=no-self-use
+    def logout(self):  # pylint: disable=no-self-use
         flask_login.logout_user()
         return redirect(url_for('.index'))
 
@@ -511,8 +514,32 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         if not flask_login.current_user.is_authenticated:
             return redirect(url_for('.login'))
 
-        flask_session['selected_task_name'] = request.args.get('selected_task')
-        url = "/worktime/new/"
+
+        session = MODELS_GLOBAL_CONTEXT['session']
+        
+        selected_task_name = request.args.get('selected_task')
+        hours_to_add = request.args.get('hours_to_add')
+        current_user = session.query(User).filter(User.id == flask_login.current_user.id).first()
+        selected_task = session.query(Task).filter(Task.name == selected_task_name).first()
+
+        data = {
+            'date_created': datetime.utcnow(),
+            'date_modified': datetime.utcnow(),
+            'duration': float(hours_to_add),
+            'user': current_user,
+            'task': selected_task,
+        }
+
+        wt = WorkTime(**data)
+        session.add(wt)
+        session.commit()
+
+        today = datetime.now().date()
+        start_of_the_week = today - timedelta(days=today.weekday())
+        start_of_the_week = start_of_the_week.strftime("%Y-%m-%d+00:00:00")
+        start_of_the_week = Markup(start_of_the_week)
+
+        url = '/worktime/?flt2_date_greater_than={}&flt6_user_user_name_equals={}'.format(start_of_the_week, current_user.name)
         return redirect(url)
 
     @flask_admin.expose('/markdown_to_html', methods=('POST', ))
