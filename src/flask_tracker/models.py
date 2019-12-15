@@ -26,7 +26,8 @@ MODELS_GLOBAL_CONTEXT = {
     'db': sqlalchemy_db_,
     'session': sqlalchemy_db_.session,
     'to_be_deleted_object_list': set([]),
-    'table_name2model_classes_map': {}, }
+    'table_name2model_classes_map': {}, 
+    'app': None}
 
 
 def scan_for_models() -> dict:
@@ -55,66 +56,37 @@ def scan_for_models() -> dict:
     return t2m_map
 
 
+def get_default_task_content():
+
+    # ~ logging.warning("args:{}, kwargs:{}".format(args, kwargs))
+    return MODELS_GLOBAL_CONTEXT['app'].config.get("SAMPLE_TASK_CONTENT", " *** ")
+    # ~ return " AAA "
+    # ~ return self.default_content
+    
 def generate_id():
     return str(uuid.uuid4())
 
-
-def insert_admin_user_in_db(app, db):
-
-    args = {'name': 'admin', 
-        'password': generate_password_hash('admin'), 
-        'role': 'admin', 
-        'email': 'admin@gmail.com'}
+def insert_users_in_db(app, db):
 
     with app.app_context():
 
-        try:
-            obj = User(**args)
-            db.session.add(obj)
-            db.session.commit()
-        except Exception as exc:
-            db.session.rollback()
-            logging.error(exc)
+        for name, pwd_, email_, role, cost in app.config.get("USERS"):
 
-def populate_sample_db(app, db, N=20):
+            args = {'name': name, 
+                'password': generate_password_hash(pwd_), 
+                'role': role, 
+                'cost_per_hour': cost, 
+                'email': email_}
 
-    SAMPLE_CONTENT = """
+            try:
+                obj = User(**args)
+                db.session.add(obj)
+                db.session.commit()
+            except Exception as exc:
+                db.session.rollback()
+                logging.info(exc)
 
-#   Title 1
-
-##  Title 2
-
-### Title 3
-
-####  Title 4
-____________
-
-o_list:
-
-1. first
-1. secodn
-1. third
-
-____________
-
-u_list:
-
-* first
-* secodn
-* third
-
-and some quoting:
-
-> ## This is a header.
->
-> 1.   This is the first list item.
-> 2.   This is the second list item.
->
-> Here's some example code:
->
->     return shell_exec("echo $input | $markdown_script");
-
-"""
+def populate_sample_db(app, db, N):
 
     fixtes = [
         (Customer, {'name': 'Alfa'}),
@@ -126,23 +98,10 @@ and some quoting:
         (Milestone, {'name': '2020.q2'}),
         (Milestone, {'name': '2020.q2'}),
         (Milestone, {'name': '2020.q3'}),
-        (Order, {'name': 'O_0010'}),
-        (Order, {'name': 'O_002'}),
-        (User, {'name': 'test', 'password': generate_password_hash('test'), 'role': 'guest', 'email': 'test@gmail.com'}),
-        (User, {'name': 'anonymous', 'password': generate_password_hash('no'), 'role': 'guest', 'email': ''}),
+        (Order, {'name': 'O_0010', 'amount': 100}),
+        (Order, {'name': 'O_0011', 'amount': 50}),
+        (Order, {'name': 'O_0020', 'amount': 100}),
     ]
-
-    import random
-    sts_ = ['new', 'open', 'in_progress', 'suspended', 'closed', 'invalid', 'dead']
-
-    for i in range(N):
-        t = (Task, {'name': 'T_%03d' % i, 'content': SAMPLE_CONTENT, 'status': random.choice(sts_)})
-        fixtes.append(t)
-
-    for i in range(N):
-        u = (User, {'name': 'U_%03d' % i, 'password': generate_password_hash(
-            'U_%03d@alfa' % i), 'role': 'guest', 'email': 'U_%03d@alfa.com' % i})
-        fixtes.append(u)
 
     MODELS_GLOBAL_CONTEXT['check_limit_before_insert_disabled'] = True
 
@@ -156,6 +115,39 @@ and some quoting:
             except Exception as exc:
                 db.session.rollback()
                 logging.info(exc)
+                logging.debug(traceback.format_exc())
+
+        import random
+
+        priorities  = [ s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_PRIORITIES", [])]
+        sts_        = [ s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_STATUSES", [])]
+        tags = ['fattibilita', 'pianificazione', 'design', 'prototipo', 'preserie']
+        users = [u for u in db.session.query(User).all()]
+        projects = [u for u in db.session.query(Project).all()]
+        orders = [u for u in db.session.query(Order).all()]
+        milestones = [u for u in db.session.query(Milestone).all()]
+        # ~ logging.warning("priorities:{}".format( priorities))
+        # ~ logging.warning("sts_      :{}".format(sts_      ))
+        # ~ logging.warning("users:{}".format(users))
+        for i in range(N):
+            dscrs = ', '.join( (random.choice(tags), random.choice(tags), random.choice(tags)) )
+            pars = {
+                'name': 'Task_%03d' % i, 
+                'priority': random.choice(priorities),
+                'status': random.choice(sts_),
+                'assignee': users[i%len(users)],
+                'project': projects[i%len(projects)],
+                'milestone': milestones[i%len(milestones)],
+                'order': orders[i%len(orders)],
+                'description': dscrs,
+            }
+            try:
+                t = Task(**pars)
+                db.session.add(t)
+                db.session.commit()
+            except Exception as exc:
+                db.session.rollback()
+                logging.warning(exc)
                 logging.debug(traceback.format_exc())
 
     MODELS_GLOBAL_CONTEXT['check_limit_before_insert_disabled'] = False
@@ -241,6 +233,9 @@ class Order(NamedModel, sqlalchemy_Model):    # pylint: disable=too-few-public-m
     db = MODELS_GLOBAL_CONTEXT['db']
     tasks = db.relationship('Task', backref='order')
     customer_id = db.Column(db.Unicode, db.ForeignKey('customer.id'))
+
+    amount = db.Column(db.Float, default=0.00, doc='economic amount of the order in arbitrary unit')
+
     def __str__(self):
         customer_name = (self.customer.name if self.customer else 'none')
         return "{}.{}".format(customer_name, self.name)
@@ -267,6 +262,7 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     role = db.Column(db.Unicode(32), default='guest')
     worktimes = db.relationship('WorkTime', backref='user')
     assigned_tasks = db.relationship('Task', backref='assignee')
+    cost_per_hour = db.Column(db.Float, default=0.00, doc='cost per hour in arbitrary unit')
 
     @property
     def login(self):
@@ -294,20 +290,20 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
 
     id = db.Column(db.Unicode, primary_key=True, nullable=False, default=generate_id)
 
+    content = db.Column(db.Unicode(1024), default=get_default_task_content)
+
     department = db.Column(db.Unicode(16))
-    content = db.Column(db.Unicode(1024))
     created_by = db.Column(db.Unicode(64))
     status = db.Column(db.Unicode(16), default='new')
+    priority = db.Column(db.Unicode(16), default='low')
+    planned_time = db.Column(db.Float, default=0.00, doc='hours')
 
     worktimes = db.relationship('WorkTime', backref='task')
     followers = db.relationship('User', secondary=followings, backref='followed')
 
-    planned_time = db.Column(db.Float, default=0.00, doc='hours')
-
     project_id = db.Column(db.Unicode, db.ForeignKey('project.id'))
     order_id = db.Column(db.Unicode, db.ForeignKey('order.id'))
     milestone_id = db.Column(db.Unicode, db.ForeignKey('milestone.id'))
-
     assignee_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
 
     parent_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
@@ -354,7 +350,10 @@ def install_listeners():
 
 def init_db(app):
 
+    MODELS_GLOBAL_CONTEXT['app'] = app
+
     db = MODELS_GLOBAL_CONTEXT['db']
+
     db.init_app(app)
 
     install_listeners()
@@ -364,10 +363,10 @@ def init_db(app):
     if not os.path.exists(db_path) or force_reset:
         reset_db(app, db)
 
-    if app.config.get("INSERT_ADMIN_USER_IN_DB"):
-        insert_admin_user_in_db(app, db)
+    if app.config.get("INSERT_USERS_IN_DB"):
+        insert_users_in_db(app, db)
 
     if app.config.get("POPULATE_SAMPLE_DB"):
-        populate_sample_db(app, db)
+        populate_sample_db(app, db, app.config.get("POPULATE_SAMPLE_DB"))
 
     return db
