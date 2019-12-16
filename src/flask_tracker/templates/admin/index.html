@@ -2,7 +2,7 @@
 
 {% block brand %}
     <style>.container {width: 96%;}</style>
-    <h4 id="brand" style="width:200px"> * Flask Tracker *</h4>
+    <h4 id="brand" style="width:200px"> * Flask Tracker *</h4> <small>ver.:  {{ version }} </small>
 {% endblock %}
 
 {% block access_control %}
@@ -61,10 +61,15 @@
             <div class="col-sm-0">
             </div>
             <div class="col-sm-3 table-responsive  page-alfa">
+            
+            
+            {% for (title, filtered_views) in (('task views', task_filtered_views), ('worked hours views', worktime_filtered_views)) %}
+            
                 <table class="table table-striped table-bordered table-hover model-list">
                     <thead>
-                        <tr><th class="col-md-4">filtered views</th></tr>            
-                    </thead>            
+                        <tr><th class="col-md-4">{{ title }}</th></tr>            
+                    </thead>   
+
                     {% for a, b in filtered_views %}
                     <tr>
                         <td class="col-md-1"> 
@@ -73,8 +78,18 @@
                     </tr>
                     {% endfor %}
                 </table>            
+
+            {% endfor %}
+
             </div>
             <div class="col-sm-2 table-responsive">
+                <label for="add_task_button"> Add a New task </label>
+                <div>
+                    <button name="add_task_button" class="form-control btn-primary" onclick="window.open('/task/new/');"> New Task </button>
+                </div>
+
+                <hr></hr>
+
                 <label for="add_work_hrs_form"> Add Working Hours </label>
                 <form name="add_work_hrs_form" action="/add_a_working_time_slot" method='GET'>
                 <label for="selected_task"> Task: </label>
@@ -89,11 +104,7 @@
                     <input class="form-control" name="date" type="date" value="2020-02-02"></input>
                     <button class="form-control btn-primary" type="submit" onclick="confirm('confirm adding hours?');">add</button>
                 </form>
-                <hr></hr>
-                <label for="add_task_button"> Add a New task </label>
-                <div>
-                    <button name="add_task_button" class="form-control btn-primary" onclick="window.open('/task/new/');"> New Task </button>
-                </div>
+
             </div>
         </div>
     </div>

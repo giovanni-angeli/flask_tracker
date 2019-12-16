@@ -20,6 +20,7 @@ from flask_tracker.admin import init_admin
 here = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_FOLDER = os.path.join(here, "templates")
 
+
 def set_logging(log_level):
     fmt_ = logging.Formatter('[%(asctime)s]'
                              '%(name)s:'

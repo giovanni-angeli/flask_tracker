@@ -20,9 +20,17 @@
 {% endblock %}
 
 
+
+
+{% block body %}
 {{ super() }}
 
+<h3>AAAAAAAAAAAAAAA</h3>
+
+{% endblock body %}
+
 {% block tail %}
+
 
     <script type="text/javascript" >
         var refresh_preview_content = function(result, status, xhr){
@@ -89,10 +97,19 @@
                 method: 'POST'
             });
         }
+        var enlarge_content = function(){
+            var e1 = document.getElementById("content");
+            if(e1.wide) {e1.rows = 12; e1.wide = false;}
+            else {e1.rows = 24; e1.wide = true;}
+        }
         $(document).ready(function() {
             var e = document.getElementById("preview_content_button");
             if (e) {
                 e.addEventListener("click", preview_content);
+            }
+            var e1 = document.getElementById("content");
+            if (e1) {
+                e1.addEventListener("click", enlarge_content);
             }
         });
     </script>

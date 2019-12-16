@@ -8,6 +8,9 @@
 # pylint: disable=too-many-locals
 # pylint: disable=broad-except
 
+import os
+import sys
+import subprocess
 import logging
 import traceback
 
@@ -39,8 +42,20 @@ from flask_tracker.models import (
     WorkTime,
     MODELS_GLOBAL_CONTEXT,)
 
+def get_version():
+    ver = None
+    try:
+        pth = os.path.abspath(os.path.dirname(sys.executable))
+        cmd = '{}/pip show flask_tracker'.format(pth)
+        for line in subprocess.run(cmd.split(), stdout=subprocess.PIPE).stdout.decode().split('\n'):
+            logging.warning("line:{}".format(line))
+            if 'Version' in line:
+                ver = line.split(":")[1]
+                ver = ver.strip()
+    except Exception as exc:  # pylint: disable=broad-except
+        logging.error(exc)
 
-
+    return ver
 
 class LoginForm(form.Form):
     login = fields.StringField(validators=[validators.required()])
@@ -113,7 +128,6 @@ def init_admin(app, db):
         @staticmethod
         def has_capabilities(user, table_name, operation='*'):
 
-            ret = False
             role = user.role
             capabilities_map = app.config.get('ROLES_CAPABILITIES_MAP', {})
             default_cap = capabilities_map[role].get('default')
@@ -136,11 +150,8 @@ def init_admin(app, db):
             ret = super(TrackerModelView, self).on_model_change(form_, obj, is_created)
             return ret
 
-
-        def update_model(self, form_, obj):
-
-            return super().update_model(form_, obj)
-
+        # ~ def update_model(self, form_, obj):
+            # ~ return super().update_model(form_, obj)
 
     class WorkTimeView(TrackerModelView):
 
@@ -190,7 +201,6 @@ def init_admin(app, db):
             ret = super(WorkTimeView, self).on_model_change(form, obj, is_created)
             return ret
 
-
     class OrderView(TrackerModelView):
 
         column_editable_list = (
@@ -198,14 +208,12 @@ def init_admin(app, db):
             # ~ 'project',
         )
 
-
     class MilestoneView(TrackerModelView):
 
         column_editable_list = (
             # ~ 'project',
             'due_date',
         )
-
 
     class ProjectView(TrackerModelView):
 
@@ -220,7 +228,6 @@ def init_admin(app, db):
             # ~ 'milestones',
             # ~ 'orders',
         )
-
 
     class UserView(TrackerModelView):
 
@@ -262,7 +269,7 @@ def init_admin(app, db):
             'assigned_tasks',
         )
 
-        def display_worked_hours(self, context, obj, name):   # pylint: disable=unused-argument
+        def display_worked_hours(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
 
             today = datetime.now().date()
             start_of_the_week = today - timedelta(days=today.weekday())
@@ -278,17 +285,19 @@ def init_admin(app, db):
 
         column_labels = dict(worktimes='Worked Hours in This Week')
 
-
     class TaskView(TrackerModelView):
 
         # ~ can_delete = False
 
         form_args = {
-            'status': {
-                'description': 'NOTE: forbidden status transitions:{}'.format(
-                    app.config.get('TASK_STATUSES_FORBIDDEN_TRANSITIONS')
-                ),
+            'description': {
+                'description': 'NOTE: use this field for TAGS',
             },
+            # ~ 'status': {
+                # ~ 'description': 'NOTE: forbidden status transitions:{}'.format(
+                    # ~ app.config.get('TASK_STATUSES_FORBIDDEN_TRANSITIONS')
+                # ~ ),
+            # ~ },
         }
 
         form_choices = {
@@ -350,7 +359,7 @@ def init_admin(app, db):
 
         column_labels = dict(worktimes='Total Worked Hours')
 
-        def display_worked_hours(self, context, obj, name):   # pylint: disable=unused-argument
+        def display_worked_hours(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
 
             total = sum([h.duration for h in obj.worktimes])
             return Markup("%.2f" % total)
@@ -367,8 +376,8 @@ def init_admin(app, db):
 
             cnt_description = 'NOTE: you can use Markdown syntax (https://daringfireball.net/projects/markdown/syntax). Use preview button to see what you get.'
             form_.content = fields.TextAreaField('* content *', [validators.optional(), validators.length(max=1000)],
-                                                 description=cnt_description, render_kw={'rows': '16'})
-            form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={'width': '1600'})
+                                                 description=cnt_description, render_kw={"rows": 12, "style": "background:#fff; border:dashed #bc2122 1px; height:auto;"})
+            form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={})
 
             return form_
 
@@ -397,18 +406,15 @@ def init_admin(app, db):
                 raise validators.ValidationError(msg)
 
             if hasattr(form_, 'status') and form_.status:
-                prev_ = form_.status.object_data
                 next_ = form_.status.data
 
                 if next_ in ('open', 'in_progress'):
                     if not obj.assignee or obj.assignee.name == 'anonymous':
-                        # ~ flash('task {} must have an assignee, to be {}.'.format(obj.name, next_), 'error')
                         msg = 'task {} must have a known assignee, to be {}.'.format(obj.name, next_)
                         raise validators.ValidationError(msg)
 
             ret = super(TaskView, self).on_model_change(form, obj, is_created)
             return ret
-
 
     class TrackerAdminResources(flask_admin.AdminIndexView):
 
@@ -443,7 +449,7 @@ def init_admin(app, db):
             assigned_task_names = ["{}::{}".format(t.name, t.description or "")[:64] for t in session.query(Task).filter(Task.status == 'in_progress').filter(
                 Task.assignee_id == flask_login.current_user.id).limit(app.config.get('MAX_OPEN_TASK_PER_USER', 20))]
 
-            filtered_views = [
+            task_filtered_views = [
                 ('all tasks in progress',
                  '/task/?flt0_status_equals=in_progress'),
                 ('tasks followed by <b>{}</b>'.format(user_name),
@@ -456,6 +462,9 @@ def init_admin(app, db):
                 # ~ '/task/?flt3_status_in_list=open%2Cin_progress&flt1_assignee_user_name_equals={}'.format(user_name)),
                 ('tasks assigned to <b>{}</b>, in progress'.format(user_name),
                  '/task/?flt0_status_equals=in_progress&flt3_assignee_user_name_equals={}'.format(user_name)),
+            ]
+
+            worktime_filtered_views = [
                 ('hours worked by <b>{}</b>, in this week'.format(user_name),
                  '/worktime/?flt2_date_greater_than={}&flt6_user_user_name_equals={}'.format(start_of_the_week, user_name)),
                 ('hours worked by <b>{}</b>, in this month'.format(user_name),
@@ -463,8 +472,10 @@ def init_admin(app, db):
             ]
 
             ctx = {
+                'version': get_version(),
                 'assigned_task_names': assigned_task_names,
-                'filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(filtered_views)]
+                'task_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(task_filtered_views)],
+                'worktime_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(worktime_filtered_views)],
             }
             return self.render(self._template, **ctx)
 
@@ -498,7 +509,7 @@ def init_admin(app, db):
             return redirect(url_for('.index'))
 
         @flask_admin.expose('/add_a_working_time_slot', methods=('GET', ))
-        def add_a_working_time_slot(self):
+        def add_a_working_time_slot(self):    # pylint: disable=no-self-use
 
             if not flask_login.current_user.is_authenticated:
                 return redirect(url_for('.login'))
@@ -531,7 +542,6 @@ def init_admin(app, db):
                 start_of_the_week, current_user.name)
             return redirect(url)
 
-
         @flask_admin.expose('/report', methods=('GET', ))
         def report(self):
 
@@ -541,7 +551,7 @@ def init_admin(app, db):
             return self.render('admin/report.html', **ctx)
 
         @flask_admin.expose('/markdown_to_html', methods=('POST', ))
-        def markdown_to_html(self):
+        def markdown_to_html(self):          # pylint: disable=no-self-use
 
             try:
                 # ~ msg = ''
@@ -557,9 +567,8 @@ def init_admin(app, db):
 
             return ret
 
-  
     index_view_ = TrackerAdminResources(url='/')
-    
+
     admin_ = Admin(app, name='FlaskTracker', template_mode='bootstrap3', index_view=index_view_)
 
     admin_.add_view(TaskView(Task, db.session))
