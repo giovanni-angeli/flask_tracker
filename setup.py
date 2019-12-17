@@ -13,8 +13,9 @@ from setuptools import setup, find_packages
 HERE = pathlib.Path(__file__).parent
 with (HERE / "README.md").open('rt') as f: 
     README = f.read()
-with (HERE / "__version__").open('rt') as f: 
-    VERSION = f.read().strip()
+
+
+VERSION = '0.1.0rc4'
 
 CONSOLE_SCRIPTS = [
     'flask_tracker=flask_tracker:main',]
@@ -37,7 +38,7 @@ INSTALL_REQUIRES = [
 SETUP_KW_ARGS = {
     'name': 'flask_tracker',
     'version': VERSION,
-    'long_description_content_type': 'text/markdown',
+    'long_description_content_type': 'text/x-rst',
     'long_description': README,
     'description': 'flask_tracker',
     'url': 'https://github.com/giovanni-angeli/flask_tracker',
