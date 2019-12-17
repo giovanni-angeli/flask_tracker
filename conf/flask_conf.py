@@ -35,6 +35,8 @@ MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 # ~ customization section
 # ~ ######################################
 MAX_OPEN_TASK_PER_USER = 30
+TASK_TAGS = ('fattibilita', 'pianificazione', 'design', 'prototipo', 'preserie') 
+
 USERS = (
     ('admin',    'admin', 'alfadispenser.com'   , 'admin', 5),
     ('test',    'test', ''   , 'guest', 0),
