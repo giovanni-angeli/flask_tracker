@@ -9,8 +9,10 @@ mkdir -p ${FT_PROJECT_ROOT}
 mkdir -p ${FT_RUNCONF_ROOT}
 mkdir -p ${FT_VENV_ROOT}
 alias ft_create_virtenv="virtualenv -p /usr/bin/python3 ${FT_VENV_ROOT}"
-alias ft_build="(cd ${FT_PROJECT_ROOT} && python3 setup.py bdist_wheel --dist-dir ./__wheels__)"
+alias ft_build_w="(cd ${FT_PROJECT_ROOT} && python3 setup.py bdist_wheel --dist-dir ./__wheels__)"
+alias ft_build_d="(cd ${FT_PROJECT_ROOT} && python3 setup.py sdist bdist_wheel)"
 alias ft_install="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT} && pip install .)"
 alias ft_install_e="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT} && pip install -e .)"
 alias ft_init="cp -a ${FT_PROJECT_ROOT}/conf/flask_conf.py ${FT_RUNCONF_ROOT}/ "
 alias ft_run="${FT_VENV_ROOT}/bin/flask_tracker -c ${FT_RUNCONF_ROOT}/flask_conf.py"
+alias ft_twine_test_dist="(cd ${FT_PROJECT_ROOT} && twine check dist/*)"

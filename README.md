@@ -69,3 +69,7 @@ open the browser:
 login as: 
 
     admin, admin
+
+## graph of the db shema:
+
+<img src="./doc/data_schema.v1.svg" alt="application_architecture" style="width: 640px;"/>

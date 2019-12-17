@@ -18,3 +18,4 @@ package-lock.json
 *.secret*
 __wheels__
 build
+dist
