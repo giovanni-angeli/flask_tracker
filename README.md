@@ -70,6 +70,6 @@ login as:
 
     admin, admin
 
-## graph of the db shema:
+## graph of the db schema:
 
 <img src="/doc/data_schema.v1.svg" alt="db schema" style="width: 640px;"/>
