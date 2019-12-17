@@ -16,3 +16,5 @@ alias ft_install_e="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT} && 
 alias ft_init="cp -a ${FT_PROJECT_ROOT}/conf/flask_conf.py ${FT_RUNCONF_ROOT}/ "
 alias ft_run="${FT_VENV_ROOT}/bin/flask_tracker -c ${FT_RUNCONF_ROOT}/flask_conf.py"
 alias ft_twine_test_dist="(cd ${FT_PROJECT_ROOT} && twine check dist/*)"
+alias ft_twine_upload_test="(cd ${FT_PROJECT_ROOT} && twine upload --repository-url https://test.pypi.org/legacy/ dist/*)"
+alias ft_twine_upload="(cd ${FT_PROJECT_ROOT} && twine upload dist/*)"
