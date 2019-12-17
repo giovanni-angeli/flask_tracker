@@ -60,9 +60,8 @@
         <div class="row">
             <div class="col-sm-0">
             </div>
-            <div class="col-sm-3 table-responsive  page-alfa">
-            
-            
+            <div class="col-sm-3 table-responsive page-alfa">
+
             {% for (title, filtered_views) in (('task views', task_filtered_views), ('worked hours views', worktime_filtered_views)) %}
             
                 <table class="table table-striped table-bordered table-hover model-list">
@@ -103,6 +102,39 @@
                     <label for="date"> date: </label>
                     <input class="form-control" name="date" type="date" value="2020-02-02"></input>
                     <button class="form-control btn-primary" type="submit" onclick="confirm('confirm adding hours?');">add</button>
+                </form>
+
+            </div>
+            <div class="col-sm-3 table-responsive page-alfa">
+
+                <label for="report_form"> Report Total Worked Hours</label>
+                <form name="report_form" action="/report" method='POST'>
+                    <label for="selected_project"> Project: </label>
+                    <select class="form-control" name="selected_project">
+                        <option name="any">any</option>
+                        {% for p in projects %}
+                        <option name="{{ p }}">{{ p }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="selected_order"> Order: </label>
+                    <select class="form-control" name="selected_order">
+                        <option name="any">any</option>
+                        {% for o in orders %}
+                        <option name="{{ o }}">{{ o }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="selected_user"> User: </label>
+                    <select class="form-control" name="selected_user">
+                        <option name="any">any</option>
+                        {% for o in users %}
+                        <option name="{{ o }}">{{ o }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="since"> since: </label>
+                    <input type="date" class="form-control" name="since">
+                    </input>
+                    <hr></hr>
+                    <button class="form-control btn-primary" type="submit">submit</button>
                 </form>
 
             </div>

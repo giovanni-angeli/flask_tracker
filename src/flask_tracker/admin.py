@@ -13,24 +13,16 @@ import sys
 import subprocess
 import logging
 import traceback
-
 from datetime import datetime, timezone, timedelta
-
 from flask import (Markup, url_for, redirect, request)  # pylint: disable=import-error
-
 from werkzeug.security import check_password_hash  # pylint: disable=import-error
-
 from jinja2 import contextfunction   # pylint: disable=import-error
-
 from wtforms import form, fields, validators  # pylint: disable=import-error
-
 import flask_admin  # pylint: disable=import-error
+import flask_login  # pylint: disable=import-error
+import markdown2  # pylint: disable=import-error
 from flask_admin.base import Admin     # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
-
-import flask_login  # pylint: disable=import-error
-
-import markdown2  # pylint: disable=import-error
 
 from flask_tracker.models import (
     Task,
@@ -470,12 +462,19 @@ def init_admin(app, db):
                 ('hours worked by <b>{}</b>, in this month'.format(user_name),
                  '/worktime/?flt2_date_greater_than={}&flt6_user_user_name_equals={}'.format(start_of_the_month, user_name)),
             ]
+            
+            project_names = [p.name for p in session.query(Project).limit(50)]
+            order_names = [o.name for o in session.query(Order).limit(50)]
+            user_names = [o.name for o in session.query(User).limit(50)]
 
             ctx = {
                 'version': get_version(),
                 'assigned_task_names': assigned_task_names,
                 'task_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(task_filtered_views)],
                 'worktime_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(worktime_filtered_views)],
+                'projects': project_names,
+                'orders': order_names,
+                'users': user_names,
             }
             return self.render(self._template, **ctx)
 
@@ -542,11 +541,19 @@ def init_admin(app, db):
                 start_of_the_week, current_user.name)
             return redirect(url)
 
-        @flask_admin.expose('/report', methods=('GET', ))
+        @flask_admin.expose('/report', methods=('GET', 'POST'))
         def report(self):
 
+            logging.warning("request.args:{}".format(request.args))
+            logging.warning("request.form:{}".format(request.form))
+            logging.warning("request.json:{}".format(request.json))
             ctx = {
-                'results': {}
+                'report_title': 'report 000',
+                'report_results': [
+                    ['a', 'b', 'c'],
+                    ['a', 'b', 'c'],
+                    ['a', 'b', 'c'],
+                ]
             }
             return self.render('admin/report.html', **ctx)
 

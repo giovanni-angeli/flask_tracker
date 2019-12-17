@@ -1,37 +1,33 @@
-{% extends 'admin/master.html' %}
 
-{% block brand %}
-    <style>.container {width: 96%;}</style>
-    <h4 id="brand" style="width:200px"> * Flask Tracker *</h4>
-{% endblock %}
-
-{% block access_control %}
-{% if current_user.is_authenticated %}
-<div class="btn-group pull-right">
-    <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-        <i class="icon-user"></i> {{ current_user.login }} <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu">
-        <li><a href="{{ url_for('admin.logout') }}">Log out</a></li>
-    </ul>
-</div>
-{% endif %}
-{% endblock %}
-
-{% block body %}
-
-<style>
-    .container {width: 96%;}
-    .page-alfa {
-        background-color: #FFF7DD;'
-    }
-</style>
-
-{{ super() }}
-
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Home - FlaskTracker</title>
+    
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="">
+        <meta name="author" content="">
+    
+    
+        <link href="/static/admin/bootstrap/bootstrap3/swatch/default/bootstrap.min.css?v=3.3.5" rel="stylesheet">
+        
+        <link href="/static/admin/bootstrap/bootstrap3/css/bootstrap-theme.min.css?v=3.3.5" rel="stylesheet">
+        
+        <link href="/static/admin/admin/css/bootstrap3/admin.css?v=1.1.1" rel="stylesheet">
+	<link href="/static/admin/admin/css/bootstrap3/submenu.css" rel="stylesheet">
+        
+        <style>
+        body {
+            padding-top: 4px;
+        }
+        </style>
+  </head>
+  <body>
     <div>
         {% if current_user.is_authenticated %}
-            <div> <h4>Home - {{ current_user.name }}</h4> </div>
+            <div> <h4>Report - {{ current_user.name }}</h4> </div>
         {% else %}
         <form method="POST" action="">
             {{ form.hidden_tag() if form.hidden_tag }}
@@ -58,46 +54,29 @@
 
     <div class="container-fluid">
         <div class="row">
-            <div class="col-sm-0">
-            </div>
             <div class="col-sm-3 table-responsive  page-alfa">
+
                 <table class="table table-striped table-bordered table-hover model-list">
                     <thead>
-                        <tr><th class="col-md-4">filtered views</th></tr>            
-                    </thead>            
-                    {% for a, b in filtered_views %}
+                        <tr><th colspan="5">{{ report_title }}</th></tr>            
+                    </thead>   
+
+                    {% for row in report_results %}
                     <tr>
-                        <td class="col-md-1"> 
-                            <a href="{{ b }}">{{ a }}</a>
-                        </td>
+                        {% for item in row %}
+                            <td> 
+                                {{ item }}
+                            </td>
+                        {% endfor %}
                     </tr>
                     {% endfor %}
+
                 </table>            
-            </div>
-            <div class="col-sm-2 table-responsive">
-                <label for="add_work_hrs_form"> Add Working Hours </label>
-                <form name="add_work_hrs_form" action="/add_a_working_time_slot" method='GET'>
-                <label for="selected_task"> Task: </label>
-                    <select class="form-control" name="selected_task">
-                        {% for t in assigned_task_names %}
-                        <option name="{{ t }}">{{ t }}</option>
-                        {% endfor %}
-                    </select>
-                    <label for="hours_to_add"> hours: </label>
-                    <input class="form-control" name="hours_to_add" type="number" step="0.5" value="0"></input>
-                    <label for="date"> date: </label>
-                    <input class="form-control" name="date" type="date" value="2020-02-02"></input>
-                    <button class="form-control btn-primary" type="submit" onclick="confirm('confirm adding hours?');">add</button>
-                </form>
-                <hr></hr>
-                <label for="add_task_button"> Add a New task </label>
-                <div>
-                    <button name="add_task_button" class="form-control btn-primary" onclick="window.open('/task/new/');"> New Task </button>
-                </div>
+
             </div>
         </div>
     </div>
-
 {% endif %}
+</body>
+</html>
 
-{% endblock body %}
