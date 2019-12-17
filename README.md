@@ -72,4 +72,4 @@ login as:
 
 ## graph of the db shema:
 
-<img src="./doc/data_schema.v1.svg" alt="application_architecture" style="width: 640px;"/>
+<img src="/doc/data_schema.v1.svg" alt="db schema" style="width: 640px;"/>
