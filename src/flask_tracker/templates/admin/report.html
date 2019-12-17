@@ -47,8 +47,6 @@
                 var td = document.createElement("td");
                 td.innerHTML = results[i][j];
                 tr.appendChild(td);
-//~                 console.log("refresh_report_table() i, j: " + i +', ' +j);
-//~                 console.log("refresh_report_table() result[i][j]: " + result[i][j]);
             }
         }
         console.log("refresh_report_table() report_table.rows.length: " + report_table.rows.length);
@@ -117,9 +115,9 @@
                 </input>
             </form>
             <p>
-                <div class="form-control btn-primary" onclick="refresh_btn_clicked();">GO</div>
+                <div><button class="form-control btn-primary" onclick="refresh_btn_clicked();">GO</button></div>
                 <hr></hr>
-                <a href="/" class="form-control btn-primary">Exit</a> 
+                <div><button class="form-control btn-primary" onclick="window.close();">CLOSE</button></div>
             </p>
         </div>
 

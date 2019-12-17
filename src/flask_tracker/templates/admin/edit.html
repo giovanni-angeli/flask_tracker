@@ -32,7 +32,7 @@
 
     <script type="text/javascript" >
         var refresh_preview_content = function(result, status, xhr){
-            console.log("result.responseText: " + result.responseText);
+//~             console.log("result.responseText: " + result.responseText);
             var url = "";
             var title = "Task content preview";
             var options = "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,zoomable=yes,width=800,height=600,top="+(200)+",left="+(240);
@@ -47,8 +47,6 @@
 
             html += '<link href="/static/admin/bootstrap/bootstrap3/swatch/default/bootstrap.min.css?v=3.3.5" rel="stylesheet">';
             html += '<link href="/static/admin/bootstrap/bootstrap3/css/bootstrap-theme.min.css?v=3.3.5" rel="stylesheet">';
-
-
             html += '</head>';
             html += '<style>';
             html += '.body { ';
@@ -80,8 +78,6 @@
         }
         var preview_content = function() {
             var e = document.getElementById("content");
-//~             console.log("content: " + e.text);
-//~             console.log("content: " + e.innerHTML);
             console.log("content: " + e.value);
             var data = {'content': e.value};
             $.ajax({

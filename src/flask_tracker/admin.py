@@ -283,7 +283,7 @@ def init_admin(app, db):
 
         form_args = {
             'description': {
-                'description': 'NOTE: use this field for TAGS',
+                'description': 'NOTE: you can use this field also for TAGS',
             },
             # ~ 'status': {
                 # ~ 'description': 'NOTE: forbidden status transitions:{}'.format(

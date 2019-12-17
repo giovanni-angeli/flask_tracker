@@ -109,13 +109,19 @@
         <hr></hr>
         <div class="row">
             <div class="col-sm-2 table-responsive">
-                <a href="/report" class="form-control btn-primary" >Reports</a>
+                <button class="form-control btn-primary" onclick="reports_btn_clicked();">Reports</button>
             </div>
         </div>
     </div>
 
 <script>
 
+    var reports_btn_clicked = function(){
+        var url = "/report";
+        var title = "Report";
+        var options = "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,zoomable=yes,top="+(200)+",left="+(240);
+        var win = window.open(url, title, options);
+    }
     var add_hours_btn_clicked = function(){
         var hours_to_add = document.getElementById('hours_to_add').value;
         if (hours_to_add <= 0) {
