@@ -243,6 +243,7 @@ class Order(NamedModel, sqlalchemy_Model):    # pylint: disable=too-few-public-m
 class Milestone(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
+    start_date = db.Column(db.DateTime)
     due_date = db.Column(db.DateTime)
     tasks = db.relationship('Task', backref='milestone')
 

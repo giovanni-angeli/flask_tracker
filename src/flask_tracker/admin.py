@@ -206,6 +206,7 @@ def init_admin(app, db):
 
         column_editable_list = (
             # ~ 'project',
+            'start_date',
             'due_date',
         )
 
@@ -283,7 +284,7 @@ def init_admin(app, db):
 
         form_args = {
             'description': {
-                'description': 'NOTE: you can use this field also for TAGS',
+                'description': 'NOTE: you can use this field also for TAGS {}'.format(app.config.get('TASK_TAGS')),
             },
             # ~ 'status': {
                 # ~ 'description': 'NOTE: forbidden status transitions:{}'.format(
