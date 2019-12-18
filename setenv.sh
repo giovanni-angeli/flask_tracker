@@ -1,5 +1,6 @@
-#~ set handy environment variables
-#~ source me to use them all
+#~ I am useful for development,
+#~ I set handy variables into environment. 
+#~ Source me to use them all
 export PYTHONDONTWRITEBYTECODE=1
 export FT_PROJECT_ROOT=/opt/PROJECTS/flask_tracker
 export FT_RUNCONF_ROOT=/opt/flask_tracker/conf

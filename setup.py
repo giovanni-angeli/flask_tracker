@@ -15,7 +15,7 @@ with (HERE / "README.md").open('rt') as f:
     README = f.read()
 
 
-VERSION = '0.1.0rc4'
+VERSION = '0.2.0rc4'
 
 CONSOLE_SCRIPTS = [
     'flask_tracker=flask_tracker:main',]

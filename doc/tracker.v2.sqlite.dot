@@ -1,11 +1,16 @@
  graph {
     graph [rankdir=LR];
+
     node [label="\N",
         shape=plaintext
+        fontsize=8,
+        fontname=Verdana
     ];
     edge [color=gray50,
         minlen=2,
         style=dashed
+        fontsize=8,
+        fontname=Verdana
     ];
 
 "customer" [label=<<FONT FACE="Verdana"><TABLE BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="8">customer</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_created</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_modified</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><u><FONT>id</FONT></u><FONT> [VARCHAR]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>description</FONT><FONT> [VARCHAR(200)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>name</FONT><FONT> [VARCHAR(64)]</FONT></TD></TR></TABLE></FONT>>];
@@ -14,11 +19,11 @@
 "work_time" [label=<<FONT FACE="Verdana"><TABLE BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="8">work_time</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_created</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_modified</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><u><FONT>id</FONT></u><FONT> [VARCHAR]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>description</FONT><FONT> [VARCHAR(200)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>task_id</FONT><FONT> [VARCHAR]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>user_id</FONT><FONT> [VARCHAR]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>duration</FONT><FONT> [FLOAT]</FONT></TD></TR></TABLE></FONT>>];
 "project" [label=<<FONT FACE="Verdana"><TABLE BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="8">project</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_created</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_modified</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><u><FONT>id</FONT></u><FONT> [VARCHAR]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>description</FONT><FONT> [VARCHAR(200)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>name</FONT><FONT> [VARCHAR(64)]</FONT></TD></TR></TABLE></FONT>>];
 "user" [label=<<FONT FACE="Verdana"><TABLE BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="8">user</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_created</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_modified</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><u><FONT>id</FONT></u><FONT> [VARCHAR]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>description</FONT><FONT> [VARCHAR(200)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>name</FONT><FONT> [VARCHAR(64)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>email</FONT><FONT> [VARCHAR(32)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>password</FONT><FONT> [VARCHAR(128)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>role</FONT><FONT> [VARCHAR(32)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>cost_per_hour</FONT><FONT> [FLOAT]</FONT></TD></TR></TABLE></FONT>>];
-"milestone" [label=<<FONT FACE="Verdana"><TABLE BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="8">milestone</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_created</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_modified</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><u><FONT>id</FONT></u><FONT> [VARCHAR]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>description</FONT><FONT> [VARCHAR(200)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>name</FONT><FONT> [VARCHAR(64)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>due_date</FONT><FONT> [DATETIME]</FONT></TD></TR></TABLE></FONT>>];
+"milestone" [label=<<FONT FACE="Verdana"><TABLE BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="8">milestone</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_created</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_modified</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><u><FONT>id</FONT></u><FONT> [VARCHAR]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>description</FONT><FONT> [TEXT(200)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>name</FONT><FONT> [TEXT(64)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>due_date</FONT><FONT> [DATE]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>start_date</FONT><FONT> [DATE]</FONT></TD></TR></TABLE></FONT>>];
 "order" [label=<<FONT FACE="Verdana"><TABLE BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="8">order</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_created</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_modified</FONT><FONT> [DATETIME]</FONT></TD></TR><TR><TD ALIGN="LEFT"><u><FONT>id</FONT></u><FONT> [VARCHAR]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>description</FONT><FONT> [VARCHAR(200)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>name</FONT><FONT> [VARCHAR(64)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>customer_id</FONT><FONT> [VARCHAR]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>amount</FONT><FONT> [FLOAT]</FONT></TD></TR></TABLE></FONT>>];
-"order" -- "task" [taillabel=<<FONT>0..N</FONT>>,headlabel=<<FONT>{0,1}</FONT>>];
-"task" -- "task" [taillabel=<<FONT>0..N</FONT>>,headlabel=<<FONT>{0,1}</FONT>>];
 "project" -- "task" [taillabel=<<FONT>0..N</FONT>>,headlabel=<<FONT>{0,1}</FONT>>];
+"task" -- "task" [taillabel=<<FONT>0..N</FONT>>,headlabel=<<FONT>{0,1}</FONT>>];
+"order" -- "task" [taillabel=<<FONT>0..N</FONT>>,headlabel=<<FONT>{0,1}</FONT>>];
 "user" -- "task" [taillabel=<<FONT>0..N</FONT>>,headlabel=<<FONT>{0,1}</FONT>>];
 "milestone" -- "task" [taillabel=<<FONT>0..N</FONT>>,headlabel=<<FONT>{0,1}</FONT>>];
 "user" -- "followings" [taillabel=<<FONT>0..N</FONT>>,headlabel=<<FONT>{0,1}</FONT>>];

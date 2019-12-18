@@ -8,23 +8,21 @@
 # pylint: disable=too-many-locals
 # pylint: disable=broad-except
 
-import os
-import sys
-import subprocess
 import logging
 import traceback
 import json
-import time 
+import time
 from datetime import datetime, timezone, timedelta
-from flask import (Markup, url_for, redirect, request)  # pylint: disable=import-error
 from werkzeug.security import check_password_hash  # pylint: disable=import-error
 from jinja2 import contextfunction   # pylint: disable=import-error
+from flask import (Markup, url_for, redirect, request)  # pylint: disable=import-error
 from wtforms import form, fields, validators  # pylint: disable=import-error
-import flask_admin  # pylint: disable=import-error
 import flask_login  # pylint: disable=import-error
 import markdown2  # pylint: disable=import-error
+import flask_admin  # pylint: disable=import-error
 from flask_admin.base import Admin     # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
+from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-error
 
 from flask_tracker.models import (
     Task,
@@ -34,26 +32,14 @@ from flask_tracker.models import (
     Order,
     User,
     WorkTime,
-    MODELS_GLOBAL_CONTEXT,)
+    MODELS_GLOBAL_CONTEXT,
+    get_package_version)
 
-def get_version():
-    ver = None
-    try:
-        pth = os.path.abspath(os.path.dirname(sys.executable))
-        cmd = '{}/pip show flask_tracker'.format(pth)
-        for line in subprocess.run(cmd.split(), stdout=subprocess.PIPE).stdout.decode().split('\n'):
-            logging.warning("line:{}".format(line))
-            if 'Version' in line:
-                ver = line.split(":")[1]
-                ver = ver.strip()
-    except Exception as exc:  # pylint: disable=broad-except
-        logging.error(exc)
-
-    return ver
 
 class LoginForm(form.Form):
-    login = fields.StringField(validators=[validators.required()])
-    password = fields.PasswordField(validators=[validators.required()])
+
+    login = fields.StringField(validators=[validators.DataRequired()])
+    password = fields.PasswordField(validators=[validators.DataRequired()])
 
     def validate_login(self, field):
 
@@ -210,6 +196,21 @@ def init_admin(app, db):
             'due_date',
         )
 
+        column_filters = (
+            'start_date',
+            'due_date',
+            'tasks',
+        )
+
+        def get_edit_form(self):
+
+            form_ = super().get_edit_form()
+
+            form_.due_date = fields.DateField('* due date', [], widget=DatePickerWidget(), render_kw={})
+            form_.start_date = fields.DateField('* start date', [], widget=DatePickerWidget(), render_kw={})
+
+            return form_
+
     class ProjectView(TrackerModelView):
 
         column_editable_list = (
@@ -287,9 +288,9 @@ def init_admin(app, db):
                 'description': 'NOTE: you can use this field also for TAGS {}'.format(app.config.get('TASK_TAGS')),
             },
             # ~ 'status': {
-                # ~ 'description': 'NOTE: forbidden status transitions:{}'.format(
-                    # ~ app.config.get('TASK_STATUSES_FORBIDDEN_TRANSITIONS')
-                # ~ ),
+            # ~ 'description': 'NOTE: forbidden status transitions:{}'.format(
+            # ~ app.config.get('TASK_STATUSES_FORBIDDEN_TRANSITIONS')
+            # ~ ),
             # ~ },
         }
 
@@ -327,10 +328,11 @@ def init_admin(app, db):
             'description',
             'assignee.name',
             'order.name',
-            'order.customer',
+            # ~ 'order.customer',
+            'project.name',
             'milestone.name',
             'status',
-            'followers',
+            # ~ 'followers',
         )
 
         form_columns = (
@@ -461,9 +463,9 @@ def init_admin(app, db):
                 ('hours worked by <b>{}</b>, in this month'.format(user_name),
                  '/worktime/?flt2_date_greater_than={}&flt6_user_user_name_equals={}'.format(start_of_the_month, user_name)),
             ]
-            
+
             ctx = {
-                'version': get_version(),
+                'version': get_package_version(),
                 'assigned_task_names': assigned_task_names,
                 'task_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(task_filtered_views)],
                 'worktime_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(worktime_filtered_views)],
@@ -556,12 +558,13 @@ def init_admin(app, db):
                     'report_title': 'report 000',
                     'report_results': []
                 }
-                return self.render('admin/report.html', **ctx)
+
+                ret = self.render('admin/report.html', **ctx)
 
             else:
 
                 data = {
-                    'time_s': time.asctime(), 
+                    'time_s': time.asctime(),
                     'report_title': "",
                     'results': [
                         [time.asctime(), time.asctime(), time.asctime()],
@@ -572,14 +575,13 @@ def init_admin(app, db):
                         [time.asctime(), time.asctime(), time.asctime()],
                     ],
                 }
-                
-                
 
                 ret = app.response_class(
                     response=json.dumps(data, indent=2),
                     mimetype='application/json'
                 )
-                return ret
+
+            return ret
 
         @flask_admin.expose('/markdown_to_html', methods=('POST', ))
         def markdown_to_html(self):          # pylint: disable=no-self-use

@@ -13,7 +13,7 @@ import traceback
 
 from flask import Flask                    # pylint: disable=import-error
 
-from flask_tracker.models import init_db
+from flask_tracker.models import init_orm
 from flask_tracker.admin import init_admin
 
 
@@ -47,18 +47,18 @@ def parse_arg():
     return options
 
 
-def init_app():
+def init_app(argv):
 
-    # ~ app = Flask('FlaskTracker', template_folder='./templates')
     app = Flask('FlaskTracker', template_folder=TEMPLATE_FOLDER)
 
+    sys.argv = argv
     options = parse_arg()
     logging.warning("options.config_file:{}".format(options.config_file))
     app.config.from_pyfile(options.config_file, silent=False)
 
     set_logging(app.config.get("LOG_LEVEL", logging.WARNING))
 
-    db = init_db(app)
+    db = init_orm(app)
     init_admin(app, db)
 
     app._static_folder = os.path.join(here, 'static')
@@ -69,7 +69,7 @@ def init_app():
 
 def main():
 
-    flask_app = init_app()
+    flask_app = init_app(sys.argv)
 
     HOST = flask_app.config.get('HOST')
     PORT = flask_app.config.get('PORT')

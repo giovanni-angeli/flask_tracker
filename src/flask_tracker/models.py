@@ -12,10 +12,7 @@ import logging
 import traceback
 from datetime import datetime
 
-from werkzeug.security import generate_password_hash
-
-from sqlalchemy import event         # pylint: disable=import-error
-
+from werkzeug.security import generate_password_hash # pylint: disable=import-error
 import flask_sqlalchemy              # pylint: disable=import-error
 
 sqlalchemy_db_ = flask_sqlalchemy.SQLAlchemy()
@@ -26,8 +23,30 @@ MODELS_GLOBAL_CONTEXT = {
     'db': sqlalchemy_db_,
     'session': sqlalchemy_db_.session,
     'to_be_deleted_object_list': set([]),
-    'table_name2model_classes_map': {}, 
+    'table_name2model_classes_map': {},
     'app': None}
+
+
+def get_package_version():
+
+    import subprocess
+    import sys
+
+    ver = '0.0.0'
+    try:
+        pth = os.path.abspath(os.path.dirname(sys.executable))
+        # ~ logging.warning("pth:{}".format(pth))
+        cmd_ = '{}/pip show flask_tracker'.format(pth)
+        # ~ logging.warning("cmd_:{}".format(cmd_))
+        for line in subprocess.run(cmd_.split(), stdout=subprocess.PIPE).stdout.decode().split('\n'):
+            # ~ logging.warning("line:{}".format(line))
+            if 'Version' in line:
+                ver = line.split(":")[1]
+                ver = ver.strip()
+    except Exception as exc:  # pylint: disable=broad-except
+        logging.error(exc)
+
+    return ver
 
 
 def scan_for_models() -> dict:
@@ -62,9 +81,11 @@ def get_default_task_content():
     return MODELS_GLOBAL_CONTEXT['app'].config.get("SAMPLE_TASK_CONTENT", " *** ")
     # ~ return " AAA "
     # ~ return self.default_content
-    
+
+
 def generate_id():
     return str(uuid.uuid4())
+
 
 def insert_users_in_db(app, db):
 
@@ -72,11 +93,11 @@ def insert_users_in_db(app, db):
 
         for name, pwd_, email_, role, cost in app.config.get("USERS"):
 
-            args = {'name': name, 
-                'password': generate_password_hash(pwd_), 
-                'role': role, 
-                'cost_per_hour': cost, 
-                'email': email_}
+            args = {'name': name,
+                    'password': generate_password_hash(pwd_),
+                    'role': role,
+                    'cost_per_hour': cost,
+                    'email': email_}
 
             try:
                 obj = User(**args)
@@ -86,7 +107,8 @@ def insert_users_in_db(app, db):
                 db.session.rollback()
                 logging.info(exc)
 
-def populate_sample_db(app, db, N):
+
+def populate_sample_db(app, db, N):   # pylint: disable=too-many-locals
 
     fixtes = [
         (Customer, {'name': 'Alfa'}),
@@ -119,8 +141,8 @@ def populate_sample_db(app, db, N):
 
         import random
 
-        priorities  = [ s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_PRIORITIES", [])]
-        sts_        = [ s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_STATUSES", [])]
+        priorities = [s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_PRIORITIES", [])]
+        sts_ = [s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_STATUSES", [])]
         tags = ['fattibilita', 'pianificazione', 'design', 'prototipo', 'preserie']
         users = [u for u in db.session.query(User).all()]
         projects = [u for u in db.session.query(Project).all()]
@@ -130,15 +152,15 @@ def populate_sample_db(app, db, N):
         # ~ logging.warning("sts_      :{}".format(sts_      ))
         # ~ logging.warning("users:{}".format(users))
         for i in range(N):
-            dscrs = ', '.join( (random.choice(tags), random.choice(tags), random.choice(tags)) )
+            dscrs = ', '.join((random.choice(tags), random.choice(tags), random.choice(tags)))
             pars = {
-                'name': 'Task_%03d' % i, 
+                'name': 'Task_%03d' % i,
                 'priority': random.choice(priorities),
                 'status': random.choice(sts_),
-                'assignee': users[i%len(users)],
-                'project': projects[i%len(projects)],
-                'milestone': milestones[i%len(milestones)],
-                'order': orders[i%len(orders)],
+                'assignee': users[i % len(users)],
+                'project': projects[i % len(projects)],
+                'milestone': milestones[i % len(milestones)],
+                'order': orders[i % len(orders)],
                 'description': dscrs,
             }
             try:
@@ -161,6 +183,7 @@ def reset_db(app, db):
         db.drop_all()
         db.create_all()
         db.session.commit()
+
 
 followings = sqlalchemy_db_.Table('followings',
                                   sqlalchemy_db_.Column(
@@ -223,10 +246,12 @@ class Project(NamedModel, sqlalchemy_Model):  # pylint: disable=too-few-public-m
     db = MODELS_GLOBAL_CONTEXT['db']
     tasks = db.relationship('Task', backref='project')
 
+
 class Customer(NamedModel, sqlalchemy_Model):   # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
     orders = db.relationship('Order', backref='customer')
+
 
 class Order(NamedModel, sqlalchemy_Model):    # pylint: disable=too-few-public-methods
 
@@ -240,12 +265,14 @@ class Order(NamedModel, sqlalchemy_Model):    # pylint: disable=too-few-public-m
         customer_name = (self.customer.name if self.customer else 'none')
         return "{}.{}".format(customer_name, self.name)
 
+
 class Milestone(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
-    start_date = db.Column(db.DateTime)
-    due_date = db.Column(db.DateTime)
+    start_date = db.Column(db.Date, default=datetime.utcnow)
+    due_date = db.Column(db.Date, default=datetime.utcnow)
     tasks = db.relationship('Task', backref='milestone')
+
 
 class WorkTime(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
@@ -253,6 +280,7 @@ class WorkTime(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-publi
     task_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
     user_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
     duration = db.Column(db.Float, default=0.00, doc='hours')
+
 
 class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
@@ -349,25 +377,36 @@ def install_listeners():
             db.event.listen(cls, 'before_insert', check_limit_before_insert)
 
 
-def init_db(app):
+def setup_orm(app):
+
+    db = MODELS_GLOBAL_CONTEXT['db']
+
+    p_ver = get_package_version().split('.')
+    p_ver_maj = p_ver[1]
+
+    force_reset = app.config.get('FORCE_RESET_DB')
+    db_path = app.config.get('DATABASE_FILE')
+    db_ver = os.path.basename(db_path).split('.')[1]
+
+    assert db_ver == "v{}".format(p_ver_maj), "db version:{} is not supported by release:{}".format(db_ver, p_ver)
+
+    if not db_path or not os.path.exists(db_path) or force_reset:
+        reset_db(app, db)
+    if app.config.get("INSERT_USERS_IN_DB"):
+        insert_users_in_db(app, db)
+    if app.config.get("POPULATE_SAMPLE_DB"):
+        populate_sample_db(app, db, app.config.get("POPULATE_SAMPLE_DB"))
+
+
+def init_orm(app):
 
     MODELS_GLOBAL_CONTEXT['app'] = app
-
     db = MODELS_GLOBAL_CONTEXT['db']
 
     db.init_app(app)
 
+    setup_orm(app)
+
     install_listeners()
-
-    force_reset = app.config.get('FORCE_RESET_DB')
-    db_path = app.config['DATABASE_FILE']
-    if not os.path.exists(db_path) or force_reset:
-        reset_db(app, db)
-
-    if app.config.get("INSERT_USERS_IN_DB"):
-        insert_users_in_db(app, db)
-
-    if app.config.get("POPULATE_SAMPLE_DB"):
-        populate_sample_db(app, db, app.config.get("POPULATE_SAMPLE_DB"))
 
     return db
