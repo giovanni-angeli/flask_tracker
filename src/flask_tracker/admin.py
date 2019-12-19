@@ -202,6 +202,13 @@ def init_admin(app, db):
             'tasks',
         )
 
+        column_list = (
+            'name',
+            'start_date',
+            'due_date',
+            'tasks',
+        )
+
         def get_edit_form(self):
 
             form_ = super().get_edit_form()

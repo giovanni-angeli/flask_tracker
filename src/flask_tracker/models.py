@@ -12,7 +12,7 @@ import logging
 import traceback
 from datetime import datetime
 
-from werkzeug.security import generate_password_hash # pylint: disable=import-error
+from werkzeug.security import generate_password_hash  # pylint: disable=import-error
 import flask_sqlalchemy              # pylint: disable=import-error
 
 sqlalchemy_db_ = flask_sqlalchemy.SQLAlchemy()
