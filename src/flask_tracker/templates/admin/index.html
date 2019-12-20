@@ -1,9 +1,13 @@
 {% extends 'admin/master.html' %}
 
 {% block brand %}
-    <style>.container {width: 96%;}</style>
-    <h4 id="brand" style="width:200px"> * Flask Tracker *</h4> <small>ver.:  {{ version }} </small>
+    <h4 id="brand" style="width:200px"> * {{ admin_view.name|capitalize }}</h4>
+    <style>
+        .container {width: 96%;}
+        .page-alfa {background-color: #FFF7DD;}
+    </style>
 {% endblock %}
+
 
 {% block access_control %}
 {% if current_user.is_authenticated %}
@@ -18,14 +22,8 @@
 {% endif %}
 {% endblock %}
 
-{% block body %}
 
-<style>
-    .container {width: 96%;}
-    .page-alfa {
-        background-color: #FFF7DD;'
-    }
-</style>
+{% block body %}
 
 {{ super() }}
 
@@ -56,6 +54,8 @@
 
 {% if current_user.is_authenticated %}
 
+{% import 'admin/forms.include.html' as forms %}
+
     <div class="container-fluid">
         <div class="row">
             <div class="col-sm-0">
@@ -79,6 +79,12 @@
                 </table>            
 
             {% endfor %}
+            <hr></hr>
+                {{ forms.selector_report("Milestone views", projects, orders, users) }}
+                <p>
+                    <div><button class="form-control btn-primary" onclick="view_milestones_btn_clicked();">view milestones</button></div>
+                    <hr></hr>
+                </p>
 
             </div>
             <div class="col-sm-2 table-responsive">

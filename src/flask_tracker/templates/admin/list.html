@@ -1,9 +1,10 @@
 {% extends 'admin/model/list.html' %}
 
 {% block brand %}
-    <style>.container {width: 96%;}</style>
     <h4 id="brand" style="width:200px"> * {{ admin_view.name|capitalize }}</h4>
+    <style>.container {width: 96%;}</style>
 {% endblock %}
+
 
 {% block access_control %}
 {% if current_user.is_authenticated %}
@@ -17,6 +18,7 @@
 </div>
 {% endif %}
 {% endblock %}
+
 
 {{ super() }}
 

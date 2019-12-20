@@ -1,5 +1,11 @@
 {% extends 'admin/model/edit.html' %}
 
+{% block brand %}
+    <h4 id="brand" style="width:200px"> * {{ admin_view.name|capitalize }}</h4>
+    <style>.container {width: 96%;}</style>
+{% endblock %}
+
+
 {% block access_control %}
 {% if current_user.is_authenticated %}
 <div class="btn-group pull-right">
@@ -12,14 +18,6 @@
 </div>
 {% endif %}
 {% endblock %}
-
-
-{% block brand %}
-    <style>.container {width: 96%;}</style>
-    <h4 id="brand" style="width:200px"> * {{ admin_view.name|capitalize }}</h4>
-{% endblock %}
-
-
 
 
 {% block body %}
@@ -104,6 +102,10 @@
             var e1 = document.getElementById("content");
             if (e1) {
                 e1.addEventListener("click", enlarge_content);
+            }
+            var e_c = document.getElementById("cathegory");
+            if (e_c) {
+                e_c.title = "{{ form.cathegory_tooltip_string }}";
             }
         });
     </script>

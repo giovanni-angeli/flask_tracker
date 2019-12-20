@@ -239,6 +239,8 @@
 
 {% if current_user.is_authenticated %}
 
+{% import 'admin/forms.include.html' as forms %}
+
 
 <div class="container-fluid">
     <div class="row" id="control_row">
@@ -252,33 +254,7 @@
     <hr></hr>
     <div class="row" id="report_row">
         <div class="col-sm-3 table-responsive page-alfa">
-            <label for="report_form"> Report Total Worked Hours</label>
-            <form name="report_form" action="/report" method='POST'>
-                <label for="selected_project"> Project: </label>
-                <select class="form-control" id="selected_project" name="selected_project">
-                    <option name="any">any</option>
-                    {% for p in projects %}
-                    <option name="{{ p }}">{{ p }}</option>
-                    {% endfor %}
-                </select>
-                <label for="selected_order"> Order: </label>
-                <select class="form-control" id="selected_order" name="selected_order">
-                    <option name="any">any</option>
-                    {% for o in orders %}
-                    <option name="{{ o }}">{{ o }}</option>
-                    {% endfor %}
-                </select>
-                <label for="selected_user"> User: </label>
-                <select class="form-control" id="selected_user" name="selected_user">
-                    <option name="any">any</option>
-                    {% for o in users %}
-                    <option name="{{ o }}">{{ o }}</option>
-                    {% endfor %}
-                </select>
-                <label for="since"> since: </label>
-                <input type="date" class="form-control" id="since" name="since">
-                </input>
-            </form>
+            {{ forms.selector_report("Report Total Worked Hours", projects, orders, users) }}
             <p>
                 <div><button class="form-control btn-primary" onclick="refresh_report_btn_clicked();">view report</button></div>
                 <hr></hr>

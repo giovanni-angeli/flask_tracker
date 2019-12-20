@@ -291,6 +291,9 @@ def init_admin(app, db):
         # ~ can_delete = False
 
         form_args = {
+            'cathegory': {
+                # ~ 'tooltip': "AAAAAAAAAAA   tooltip on focus!",
+            },
             'description': {
                 'description': 'NOTE: you can use this field also for TAGS {}'.format(app.config.get('TASK_TAGS')),
             },
@@ -305,6 +308,7 @@ def init_admin(app, db):
             'department': app.config.get('DEPARTMENTS'),
             'status': app.config.get('TASK_STATUSES'),
             'priority': app.config.get('TASK_PRIORITIES'),
+            'cathegory': app.config.get('TASK_CATHEGORIES'),
         }
 
         column_list = (
@@ -314,6 +318,7 @@ def init_admin(app, db):
             'order',
             'project',
             'priority',
+            'cathegory',
             'parent',
             'date_created',
             'assignee',
@@ -324,6 +329,7 @@ def init_admin(app, db):
 
         column_editable_list = (
             'assignee',
+            'cathegory',
             'priority',
             'followers',
             'status',
@@ -348,6 +354,7 @@ def init_admin(app, db):
             'assignee',
             'status',
             'priority',
+            'cathegory',
             'project',
             'department',
             'milestone',
@@ -379,7 +386,13 @@ def init_admin(app, db):
             cnt_description = 'NOTE: you can use Markdown syntax (https://daringfireball.net/projects/markdown/syntax). Use preview button to see what you get.'
             form_.content = fields.TextAreaField('* content *', [validators.optional(), validators.length(max=1000)],
                                                  description=cnt_description, render_kw={"rows": 12, "style": "background:#fff; border:dashed #bc2122 1px; height:auto;"})
+
             form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={})
+
+            logging.warning("form_.cathegory:{}".format(form_.cathegory))
+            logging.warning("dir(form_.cathegory):{}".format(dir(form_.cathegory)))
+
+            setattr(form_, 'cathegory_tooltip_string', Markup(app.config.get('CATHEGORY_TOOLTIP_STRING')))
 
             return form_
 
@@ -471,7 +484,14 @@ def init_admin(app, db):
                  '/worktime/?flt2_date_greater_than={}&flt6_user_user_name_equals={}'.format(start_of_the_month, user_name)),
             ]
 
+            project_names = [p.name for p in session.query(Project).limit(50)]
+            order_names = [o.name for o in session.query(Order).limit(50)]
+            user_names = [o.name for o in session.query(User).limit(50)]
+
             ctx = {
+                'projects': project_names,
+                'orders': order_names,
+                'users': user_names,
                 'version': get_package_version(),
                 'assigned_task_names': assigned_task_names,
                 'task_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(task_filtered_views)],

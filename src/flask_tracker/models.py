@@ -142,6 +142,7 @@ def populate_sample_db(app, db, N):   # pylint: disable=too-many-locals
         import random
 
         priorities = [s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_PRIORITIES", [])]
+        cathegories = [s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_CATHEGORIES", [])]
         sts_ = [s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_STATUSES", [])]
         tags = ['fattibilita', 'pianificazione', 'design', 'prototipo', 'preserie']
         users = [u for u in db.session.query(User).all()]
@@ -156,6 +157,7 @@ def populate_sample_db(app, db, N):   # pylint: disable=too-many-locals
             pars = {
                 'name': 'Task_%03d' % i,
                 'priority': random.choice(priorities),
+                'cathegory': random.choice(cathegories),
                 'status': random.choice(sts_),
                 'assignee': users[i % len(users)],
                 'project': projects[i % len(projects)],
@@ -325,6 +327,7 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     created_by = db.Column(db.Unicode(64))
     status = db.Column(db.Unicode(16), default='new')
     priority = db.Column(db.Unicode(16), default='low')
+    cathegory = db.Column(db.Unicode(16), default='')
     planned_time = db.Column(db.Float, default=0.00, doc='hours')
 
     worktimes = db.relationship('WorkTime', backref='task')
