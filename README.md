@@ -50,9 +50,9 @@ OR install in edit mode, i.e. development mode:
 
     $ (. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT} && pip install -e .)
 
-init the application, i.e. clone a conf file:
+init the application (i.e. clone default conf files):
 
-    $ cp ${FT_PROJECT_ROOT}/conf/flask_conf.py ${FT_RUNCONF_ROOT}/
+    $ ${FT_VENV_ROOT}/bin/flask_tracker_init ${FT_RUNCONF_ROOT}
 
 edit your conf file:
 

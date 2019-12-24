@@ -17,8 +17,8 @@ from flask_tracker.models import init_orm
 from flask_tracker.admin import init_admin
 
 
-here = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_FOLDER = os.path.join(here, "templates")
+HERE = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE_FOLDER = os.path.join(HERE, "templates")
 
 
 def set_logging(log_level):
@@ -47,7 +47,7 @@ def parse_arg():
     return options
 
 
-def init_app(argv):
+def _init_app(argv):
 
     app = Flask('FlaskTracker', template_folder=TEMPLATE_FOLDER)
 
@@ -61,15 +61,28 @@ def init_app(argv):
     db = init_orm(app)
     init_admin(app, db)
 
-    app._static_folder = os.path.join(here, 'static')
-    logging.warning("app._static_folder:{}".format(app._static_folder))
+    # ~ app._static_folder = os.path.join(HERE, 'static')
+    # ~ logging.warning("app._static_folder:{}".format(app._static_folder))
 
     return app
 
 
+def initialize_instance():
+
+    import shutil
+    import glob
+    
+    dst = sys.argv[1]
+
+    # ~ for file in glob.glob(r'C:/*.txt'):
+    for file in glob.glob(os.path.join(HERE, "default_conf", '*.*')):
+        logging.warning("copying {} in {}".format(file, dst))
+        shutil.copy(file, dst)
+
+
 def main():
 
-    flask_app = init_app(sys.argv)
+    flask_app = _init_app(sys.argv)
 
     HOST = flask_app.config.get('HOST')
     PORT = flask_app.config.get('PORT')

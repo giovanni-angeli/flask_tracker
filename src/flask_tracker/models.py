@@ -24,10 +24,14 @@ MODELS_GLOBAL_CONTEXT = {
     'session': sqlalchemy_db_.session,
     'to_be_deleted_object_list': set([]),
     'table_name2model_classes_map': {},
+    'package_version': None,
     'app': None}
 
 
 def get_package_version():
+
+    if MODELS_GLOBAL_CONTEXT.get('package_version'):
+        return MODELS_GLOBAL_CONTEXT['package_version']
 
     import subprocess
     import sys
@@ -45,6 +49,8 @@ def get_package_version():
                 ver = ver.strip()
     except Exception as exc:  # pylint: disable=broad-except
         logging.error(exc)
+
+    MODELS_GLOBAL_CONTEXT['package_version'] = ver
 
     return ver
 
@@ -248,6 +254,10 @@ class Project(NamedModel, sqlalchemy_Model):  # pylint: disable=too-few-public-m
     db = MODELS_GLOBAL_CONTEXT['db']
     tasks = db.relationship('Task', backref='project')
 
+    @property
+    def in_progress(self):
+        return len([t for t in self.tasks if t.status == 'in_progress']) > 0
+
 
 class Customer(NamedModel, sqlalchemy_Model):   # pylint: disable=too-few-public-methods
 
@@ -267,6 +277,9 @@ class Order(NamedModel, sqlalchemy_Model):    # pylint: disable=too-few-public-m
         customer_name = (self.customer.name if self.customer else 'none')
         return "{}.{}".format(customer_name, self.name)
 
+    @property
+    def in_progress(self):
+        return len([t for t in self.tasks if t.status == 'in_progress']) > 0
 
 class Milestone(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
@@ -274,6 +287,10 @@ class Milestone(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-pub
     start_date = db.Column(db.Date, default=datetime.utcnow)
     due_date = db.Column(db.Date, default=datetime.utcnow)
     tasks = db.relationship('Task', backref='milestone')
+
+    @property
+    def in_progress(self):
+        return len([t for t in self.tasks if t.status == 'in_progress']) > 0
 
 
 class WorkTime(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
@@ -392,6 +409,10 @@ def setup_orm(app):
     db_ver = os.path.basename(db_path).split('.')[1]
 
     assert db_ver == "v{}".format(p_ver_maj), "db version:{} is not supported by release:{}".format(db_ver, p_ver)
+    
+    db_base_path = os.path.dirname(db_path)
+    if not os.path.exists(db_base_path):
+        os.makedirs(db_base_path)
 
     if not db_path or not os.path.exists(db_path) or force_reset:
         reset_db(app, db)

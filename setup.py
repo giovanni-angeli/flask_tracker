@@ -17,9 +17,6 @@ with (HERE / "README.md").open('rt') as f:
 
 VERSION = '0.3.0rc5'
 
-CONSOLE_SCRIPTS = [
-    'flask_tracker=flask_tracker:main',]
-
 INSTALL_REQUIRES = [
     'jsonschema',  # ==2.6.0
     "futures",  # ==3.1.1
@@ -51,13 +48,16 @@ SETUP_KW_ARGS = {
     ],
     'install_requires': INSTALL_REQUIRES,
     'entry_points': {
-        'console_scripts': CONSOLE_SCRIPTS,
+        'console_scripts': [
+            'flask_tracker_run=flask_tracker:main',
+            'flask_tracker_init=flask_tracker:initialize_instance',],
     },
     'packages': find_packages('src'),
     'package_dir': {'': 'src'},
     'py_modules': [splitext(basename(pth))[0] for pth in glob('src/*.py')],
     'package_data': {
         'flask_tracker': [
+            'default_conf/*',
             'templates/*.html',
             'templates/*/*.html',
             'static/*.*',

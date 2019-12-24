@@ -4,19 +4,22 @@
 <head>
 <title>Reports</title>
 
-  <meta charset="UTF-8"/>
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content=""/>
-  <meta name="author" content=""/>
-  <link href="/static/admin/bootstrap/bootstrap3/swatch/default/bootstrap.min.css?v=3.3.5" rel="stylesheet"/>
-  <link href="/static/admin/bootstrap/bootstrap3/css/bootstrap-theme.min.css?v=3.3.5" rel="stylesheet"/>
-  <link href="/static/admin/admin/css/bootstrap3/admin.css?v=1.1.1" rel="stylesheet"/>
-  <link href="/static/admin/admin/css/bootstrap3/submenu.css" rel="stylesheet"/>
+    <meta charset="UTF-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content=""/>
+    <meta name="author" content=""/>
+    <link href="/static/admin/bootstrap/bootstrap3/swatch/default/bootstrap.min.css?v=3.3.5" rel="stylesheet"/>
+    <link href="/static/admin/bootstrap/bootstrap3/css/bootstrap-theme.min.css?v=3.3.5" rel="stylesheet"/>
+    <link href="/static/admin/admin/css/bootstrap3/admin.css?v=1.1.1" rel="stylesheet"/>
+    <link href="/static/admin/admin/css/bootstrap3/submenu.css" rel="stylesheet"/>
 
-  <script src="/static/lib/js/jquery.min.js"></script>
-  <script src="/static/lib/js/popper.min.js"></script>
-  <script src="/static/lib/js/bootstrap.min.js"></script>
+    <script src="/static/lib/js/jquery.min.js"></script>
+    <script src="/static/lib/js/popper.min.js"></script>
+    <script src="/static/lib/js/bootstrap.min.js"></script>
+  
+    <script src="/static/lib/frappe-gantt/frappe-gantt.js"></script>
+    <link rel="stylesheet" href="/static/lib/frappe-gantt/frappe-gantt.css">
 
   <style>
         body {
@@ -128,30 +131,6 @@
   </style>
 
 <script>
-
-    var refresh_report_table = function(data, status, xhr) {
-        var results = data.results;
-        var time_s = data.time_s;
-        var title = data.report_title;
-        document.createElement("report_title").innerHTML = title;
-//~         console.log("refresh_report_table() results.length: " + results.length);
-//~         console.log("refresh_report_table() results: " + JSON.stringify(results));
-        var report_table = document.getElementById('report_table')
-        var n = report_table.rows.length;
-        for (var i = 0; i < n; i++) {
-            report_table.deleteRow(0);
-        }
-        for (var i = 0; i < results.length; i++) {
-            var tr = report_table.insertRow();
-            for (var j = 0; j < results[i].length; j++) {
-                var td = document.createElement("td");
-                td.innerHTML = results[i][j];
-                tr.appendChild(td);
-            }
-        }
-//~         console.log("refresh_report_table() report_table.rows.length: " + report_table.rows.length);
-    }
-
     var refresh_gantt = function(e){
       const el = document.getElementById("chart_container");
       el.hidden = ! el.hidden;
@@ -190,47 +169,90 @@
       });
     }
     var refresh_gantt_btn_clicked = function(e){
-        var data = {};
-        data.selected_project = document.getElementById('selected_project').value;
-        data.selected_order = document.getElementById('selected_order').value;
-        data.selected_user = document.getElementById('selected_user').value;
-        data.since = document.getElementById('since').value;
-        $.ajax({
-            data: data,
-            dataType: "json",
-            success: refresh_gantt,
-            error: refresh_gantt,
-            contentType: "application/json",
-            timeout: 5000,
-            url: '/gantt',
-            method: 'POST'
-        });
+        refresh_gantt();
     }
-    var refresh_report_btn_clicked = function(){
-        var data = {};
-        data.selected_project = document.getElementById('selected_project').value;
-        data.selected_order = document.getElementById('selected_order').value;
-        data.selected_user = document.getElementById('selected_user').value;
-        data.since = document.getElementById('since').value;
-        $.ajax({
-            data: data,
-            dataType: "json",
-            success: refresh_report_table,
-            error: refresh_report_table,
-            contentType: "application/json",
-            timeout: 5000,
-            url: '/report',
-            method: 'POST'
-        });
-    };
-
     var init = function(){
         var d = new Date();
         var prevMonday = new Date();
         prevMonday.setDate(d.getDate() - d.getDay() + 1);
-        document.getElementById('since').valueAsDate = prevMonday;
-
+//~         document.getElementById('since').valueAsDate = prevMonday;
         window.addEventListener("resize", refresh_gantt_btn_clicked);
+        
+        var tasks = [
+            {
+                start: '2019-10-01',
+                end: '2019-10-08',
+                name: 'Redesign website',
+                id: "Task 0",
+                progress: 20
+            },
+            {
+                start: '2019-10-03',
+                end: '2019-10-06',
+                name: 'Write new content',
+                id: "Task 1",
+                progress: 5,
+                dependencies: 'Task 0'
+            },
+            {
+                start: '2019-10-04',
+                end: '2019-10-08',
+                name: 'Apply new styles',
+                id: "Task 2",
+                progress: 10,
+                dependencies: 'Task 1'
+            },
+            {
+                start: '2019-10-08',
+                end: '2019-10-09',
+                name: 'Review',
+                id: "Task 3",
+                progress: 5,
+                dependencies: 'Task 2'
+            },
+            {
+                start: '2019-10-08',
+                end: '2019-10-10',
+                name: 'Deploy',
+                id: "Task 4",
+                progress: 0,
+                dependencies: 'Task 2'
+            },
+            {
+                start: '2019-10-11',
+                end: '2019-10-11',
+                name: 'Go Live!',
+                id: "Task 5",
+                progress: 0,
+                dependencies: 'Task 4',
+                custom_class: 'bar-milestone'
+            },
+//~             {
+//~                 start: '2019-01-05',
+//~                 end: '2019-10-12',
+//~                 name: 'Long term task',
+//~                 id: "Task 6",
+//~                 progress: 0
+//~             }
+        ]
+        var el = document.getElementById("gantt-target");
+        console.log("el:", el);
+        var options = {
+            header_height: 60,
+            column_width: 2000,
+            step: 24,
+            view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
+//~             view_modes: ['Quarter Day', ],
+            bar_height: 20,
+            bar_corner_radius: 3,
+            arrow_curve: 5,
+            padding: 18,
+            view_mode: 'Day',   
+            date_format: 'YYYY-MM-DD',
+            custom_popup_html: null
+        };
+
+        var gantt = new Gantt(el, tasks, options);        
     };
 
 </script>
@@ -245,28 +267,13 @@
 <div class="container-fluid">
     <div class="row" id="control_row">
         <div class="col-sm-1">
-            <div><button class="form-control btn-primary" onclick="window.close();">Close</button></div>
+            <div><a href="/" class="form-control btn-primary">Back</a></div>
         </div>
         <div class="col-sm-2">
-            <h4>Report - {{ current_user.name }}</h4> 
+            <h4>Gantt - {{ current_user.name }}</h4> 
         </div>
     </div>
     <hr></hr>
-    <div class="row" id="report_row">
-        <div class="col-sm-3 table-responsive page-alfa">
-            {{ forms.selector_01("report_selector", "Report Total Worked Hours", projects, orders, users) }}
-            <p>
-                <div><button class="form-control btn-primary" onclick="refresh_report_btn_clicked();">view report</button></div>
-                <hr></hr>
-            </p>
-        </div>
-        <div class="col-sm-3 table-responsive">
-            <h4 id="report_title">{{ report_title }}</h4>
-            <table class="table table-striped table-bordered table-hover model-list" id="report_table">
-            </table>            
-        </div>
-    </div>
-
     <div class="row" id="gantt_row">
         <div class="col-sm-10 table-responsive">
             <div><button class="btn-primary" onclick="refresh_gantt_btn_clicked();">toggle gantt view</button></div>
@@ -295,6 +302,14 @@
             </div>
         </div>
     </div>
+
+
+    <div class="container">
+        <h4>Interactive Gantt Chart in SVG</h4>
+        <div id="gantt-target"></div>
+    </div>
+
+
 </div>
 
 <script>

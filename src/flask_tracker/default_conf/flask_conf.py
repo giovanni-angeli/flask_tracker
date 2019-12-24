@@ -13,16 +13,16 @@ LOG_LEVEL = 'WARNING'
 # ~ actions-at-start-up section
 # ~ ######################################
 INSERT_USERS_IN_DB = True
-POPULATE_SAMPLE_DB = 50
+# ~ POPULATE_SAMPLE_DB = 50
 # ~ FORCE_RESET_DB = True
 
 # ~ ######################################
 # ~ flask-admin section
 # ~ ######################################
-database_file_ = os.path.join('/opt/flask_tracker/data', 'tracker.v2.sqlite')
+database_file_ = os.path.join('/opt/flask_tracker/data', 'tracker.v3.sqlite')
 DEBUG = True
 ENV = 'development'
-TESTING = True
+TESTING = False
 PROPAGATE_EXCEPTIONS = 'console'
 SECRET_KEY = os.environ.get('SECRET_KEY') or '1*3*5*7*0'
 DATABASE_FILE = database_file_
@@ -35,10 +35,10 @@ MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 # ~ customization section
 # ~ ######################################
 MAX_OPEN_TASK_PER_USER = 30
-TASK_TAGS = ('fattibilita', 'pianificazione', 'design', 'prototipo', 'preserie') 
+TASK_TAGS = ('TAG_0', 'TAG_1') 
 
 USERS = (
-    ('admin',    'admin', 'alfadispenser.com'   , 'admin', 5),
+    ('admin',    'admin', 'admin@the.company.com'   , 'admin', 5),
     ('test',    'test', ''   , 'guest', 0),
     ('anonymous',    '', ''   , 'guest', 0),)
 
@@ -72,6 +72,13 @@ DEPARTMENTS = [
     ('mechanical', 'Mechanical'),
     ('electronics', 'Electronics'),
     ('lab', 'Lab'),]
+
+TASK_CATHEGORIES = [ (n, n) for n in ( 
+                        'fattibilita', 
+                        'pianificazione', 
+                        'design', 
+                        'prototipo', 
+                        'preserie')]
 
 TASK_PRIORITIES = [
     ('low', 'Low'),

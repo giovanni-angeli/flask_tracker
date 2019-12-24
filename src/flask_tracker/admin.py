@@ -13,6 +13,7 @@ import traceback
 import json
 import time
 from datetime import datetime, timezone, timedelta
+from urllib.parse import quote
 from werkzeug.security import check_password_hash  # pylint: disable=import-error
 from jinja2 import contextfunction   # pylint: disable=import-error
 from flask import (Markup, url_for, redirect, request)  # pylint: disable=import-error
@@ -34,6 +35,43 @@ from flask_tracker.models import (
     WorkTime,
     MODELS_GLOBAL_CONTEXT,
     get_package_version)
+
+
+
+# ~ helpers (aka Louisiana hoppers with herpes)
+def get_start_of_week():
+
+    today = datetime.now().date()
+    start_of_the_week = today - timedelta(days=today.weekday())
+    start_of_the_week = start_of_the_week.strftime("%Y-%m-%d+00:00:00")
+    start_of_the_week = Markup(start_of_the_week)
+    return start_of_the_week
+
+def get_start_of_month():
+
+    today = datetime.now().date()
+    start_of_the_month = today - timedelta(days=today.day)
+    start_of_the_month = start_of_the_month.strftime("%Y-%m-%d+23:59:00")
+    start_of_the_month = Markup(start_of_the_month)
+    return start_of_the_month
+
+def compile_filtered_url(model_name, filters):
+
+    # ~ "/task/?flt2_project_project_name_in_list=a%2Cg"
+    url_ = "/{}/?".format(model_name)
+    filter_as_strings = []
+    for n, (f_name, opr, arg) in enumerate(filters):
+        assert opr in (
+            'equals', 'contains', 'in_list', 'not_equal', 'not_contains', 'not_in_list', 'empty',
+            'greater_than', 'smaller_than', 'between', 'not_between',
+        ), "unrecognized operator '{}' in compile_filtered_url()".format(opr)
+
+        if isinstance(arg, (list, tuple, set)):
+            arg = ",".join(arg)
+        filter_as_strings.append("flt{}_{}_{}={}".format(n, f_name, opr, arg))
+    url_ += '&'.join(filter_as_strings)
+    url_ = quote(url_, safe='/?&=+')
+    return url_
 
 
 class LoginForm(form.Form):
@@ -63,16 +101,9 @@ class LoginForm(form.Form):
         return session.query(User).filter_by(name=self.login.data).first()
 
 
-def init_admin(app, db):
+def define_view_classes(app):
 
-    login_manager = flask_login.LoginManager()
-    login_manager.init_app(app)
-
-    @login_manager.user_loader
-    def load_user(user_id):    # pylint: disable=unused-variable
-        # ~ logging.warning("user_id:{}".format(user_id))
-        session = MODELS_GLOBAL_CONTEXT['session']
-        return session.query(User).get(user_id)
+    """ we need an already initialized app to (access the app.config), when defining the ModelView classes """
 
     class TrackerModelView(ModelView):
 
@@ -275,7 +306,7 @@ def init_admin(app, db):
             today = datetime.now().date()
             start_of_the_week = today - timedelta(days=today.weekday())
 
-            total = sum([h.duration for h in obj.worktimes if h.date_modified >= start_of_the_week])
+            total = sum([h.duration for h in obj.worktimes if h.date >= start_of_the_week])
             return Markup("%.2f" % total)
 
         column_formatters = TrackerModelView.column_formatters
@@ -290,18 +321,15 @@ def init_admin(app, db):
 
         # ~ can_delete = False
 
+        column_searchable_list = (
+            'description',
+            'cathegory',
+        )
+
         form_args = {
-            'cathegory': {
-                # ~ 'tooltip': "AAAAAAAAAAA   tooltip on focus!",
-            },
             'description': {
                 'description': 'NOTE: you can use this field also for TAGS {}'.format(app.config.get('TASK_TAGS')),
             },
-            # ~ 'status': {
-            # ~ 'description': 'NOTE: forbidden status transitions:{}'.format(
-            # ~ app.config.get('TASK_STATUSES_FORBIDDEN_TRANSITIONS')
-            # ~ ),
-            # ~ },
         }
 
         form_choices = {
@@ -339,6 +367,7 @@ def init_admin(app, db):
             'name',
             'date_modified',
             'description',
+            'cathegory',
             'assignee.name',
             'order.name',
             # ~ 'order.customer',
@@ -389,9 +418,6 @@ def init_admin(app, db):
 
             form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={})
 
-            logging.warning("form_.cathegory:{}".format(form_.cathegory))
-            logging.warning("dir(form_.cathegory):{}".format(dir(form_.cathegory)))
-
             setattr(form_, 'cathegory_tooltip_string', Markup(app.config.get('CATHEGORY_TOOLTIP_STRING')))
 
             return form_
@@ -438,65 +464,58 @@ def init_admin(app, db):
         @flask_admin.expose("/index")
         def index(self, ):
 
+            t0 = time.time()
+
             if not flask_login.current_user.is_authenticated:
                 return redirect(url_for('.login'))
 
-            # ~ url_ = "/task/?flt2_assignee_user_name_equals={}".format(flask_login.current_user.name)
-            # ~ return redirect(url_)
-
             session = MODELS_GLOBAL_CONTEXT['session']
 
-            logging.warning("self._template:{}".format(self._template))
-
-            today = datetime.now().date()
-            start_of_the_week = today - timedelta(days=today.weekday())
-            start_of_the_week = start_of_the_week.strftime("%Y-%m-%d+00:00:00")
-            start_of_the_week = Markup(start_of_the_week)
-
-            start_of_the_month = today - timedelta(days=today.day)
-            start_of_the_month = start_of_the_month.strftime("%Y-%m-%d+23:59:00")
-            start_of_the_month = Markup(start_of_the_month)
-
+            start_of_the_week = get_start_of_week()
+            start_of_the_month = get_start_of_month()
             user_name = flask_login.current_user.name
 
             assigned_task_names = ["{}::{}".format(t.name, t.description or "")[:64] for t in session.query(Task).filter(Task.status == 'in_progress').filter(
                 Task.assignee_id == flask_login.current_user.id).limit(app.config.get('MAX_OPEN_TASK_PER_USER', 20))]
 
             task_filtered_views = [
-                ('all tasks in progress',
-                 '/task/?flt0_status_equals=in_progress'),
-                ('tasks followed by <b>{}</b>'.format(user_name),
-                 '/task/?flt2_user_name_equals={}'.format(user_name)),
-                ('tasks assigned to <b>{}</b>'.format(user_name),
-                 '/task/?flt2_assignee_user_name_equals={}'.format(user_name)),
-                ('open tasks assigned to <b>{}</b>'.format(user_name),
-                 '/task/?flt0_status_equals=open&flt3_assignee_user_name_equals={}'.format(user_name)),
-                # ~ ('2. open or in progress tasks assigned to <b>{}</b>'.format(user_name),
-                # ~ '/task/?flt3_status_in_list=open%2Cin_progress&flt1_assignee_user_name_equals={}'.format(user_name)),
-                ('tasks assigned to <b>{}</b>, in progress'.format(user_name),
-                 '/task/?flt0_status_equals=in_progress&flt3_assignee_user_name_equals={}'.format(user_name)),
+                ('all open tasks', compile_filtered_url('task', [('status', 'equals', 'open')])),
+                ('all tasks in progress', compile_filtered_url('task', [('status', 'equals', 'in_progress')])),
+                ('all tasks followed by <b>{}</b>'.format(user_name),
+                 compile_filtered_url('task', [('user_name', 'equals', user_name)])),
+                ('tasks assigned to <b>{}</b> open or in progress'.format(user_name),
+                 compile_filtered_url('task', [('assignee_user_name', 'equals', user_name), ('status', 'in_list', ('open', 'in_progress'))])),
+                ('all tasks assigned to <b>{}</b>'.format(user_name),
+                 compile_filtered_url('task', [('assignee_user_name', 'equals', user_name)])),
             ]
 
             worktime_filtered_views = [
                 ('hours worked by <b>{}</b>, in this week'.format(user_name),
-                 '/worktime/?flt2_date_greater_than={}&flt6_user_user_name_equals={}'.format(start_of_the_week, user_name)),
+                 compile_filtered_url('worktime', [('date', 'greater_than', start_of_the_week), ('user_user_name', 'equals', user_name)])),
                 ('hours worked by <b>{}</b>, in this month'.format(user_name),
-                 '/worktime/?flt2_date_greater_than={}&flt6_user_user_name_equals={}'.format(start_of_the_month, user_name)),
+                 compile_filtered_url('worktime', [('date', 'greater_than', start_of_the_month), ('user_user_name', 'equals', user_name)])),
             ]
 
-            project_names = [p.name for p in session.query(Project).limit(50)]
-            order_names = [o.name for o in session.query(Order).limit(50)]
-            user_names = [o.name for o in session.query(User).limit(50)]
+            project_names = sorted([o.name for o in session.query(Project).limit(50) if o.in_progress])
+            order_names = sorted([o.name for o in session.query(Order).limit(50) if o.in_progress])
+            milestone_names = sorted([o.name for o in session.query(Milestone).limit(50) if o.in_progress])
+            user_names = sorted([o.name for o in session.query(User).limit(50)])
+            cathegory_names = sorted([ n[0] for n in app.config.get('TASK_CATHEGORIES') ])
 
             ctx = {
                 'projects': project_names,
                 'orders': order_names,
+                'milestones': milestone_names,
                 'users': user_names,
+                'cathegories': cathegory_names,
                 'version': get_package_version(),
                 'assigned_task_names': assigned_task_names,
                 'task_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(task_filtered_views)],
                 'worktime_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(worktime_filtered_views)],
             }
+
+            logging.warning("dt:{}".format(time.time() - t0))
+
             return self.render(self._template, **ctx)
 
         @flask_admin.expose('/login/', methods=('GET', 'POST'))
@@ -542,8 +561,6 @@ def init_admin(app, db):
             selected_task = session.query(Task).filter(Task.name == selected_task_name).first()
 
             data = {
-                'date_created': datetime.utcnow(),
-                'date_modified': datetime.utcnow(),
                 'duration': float(hours_to_add),
                 'user': current_user,
                 'task': selected_task,
@@ -553,17 +570,23 @@ def init_admin(app, db):
             session.add(wt)
             session.commit()
 
-            today = datetime.now().date()
-            start_of_the_week = today - timedelta(days=today.weekday())
-            start_of_the_week = start_of_the_week.strftime("%Y-%m-%d+00:00:00")
-            start_of_the_week = Markup(start_of_the_week)
+            url_ = compile_filtered_url('worktime',
+                                        [('date', 'greater_than', get_start_of_week()), ('user_user_name', 'equals', current_user.name)])
 
-            url = '/worktime/?flt2_date_greater_than={}&flt6_user_user_name_equals={}'.format(
-                start_of_the_week, current_user.name)
-            return redirect(url)
+            return redirect(url_)
+
+        @flask_admin.expose('/gantt', methods=('GET', 'POST'))
+        def gantt_page(self):
+
+            logging.warning("request.form:{}".format(request.form))
+
+            ctx = {
+                'form': request.form,
+            }
+            return self.render("admin/gantt_page.html", **ctx)
 
         @flask_admin.expose('/report', methods=('GET', 'POST'))
-        def report(self):
+        def report_query(self):
 
             logging.warning("request.args:{}".format(request.args))
             logging.warning("request.form:{}".format(request.form))
@@ -610,6 +633,35 @@ def init_admin(app, db):
 
             return ret
 
+        @flask_admin.expose('/filtered_view', methods=('GET', 'POST'))
+        def filtered_view(self):          # pylint: disable=no-self-use
+
+            logging.warning("request.args:{}".format(request.args))
+            # ~ logging.warning("request.form:{}".format(request.form))
+
+            filters = []
+            request_args = {}
+            logging.warning("request.args:{}".format(request.args))
+            logging.warning("list(request.args):{}".format(list(request.args)))
+            for k in request.args:
+                v = request.args.getlist(k)
+                logging.warning("(k, v):{}".format((k, v)))
+                # ~ request_args.setdefault(k, [])
+                # ~ request_args[k].append(v)
+                request_args[k] = v
+
+            logging.warning("request_args:{}".format(request_args))
+
+            model_name = request_args.pop('model_name')[0]
+
+            filters += [(k, 'in_list', v) for k, v in request_args.items()]
+
+            url_ = compile_filtered_url(model_name, filters)
+
+            logging.warning("url_:{}".format(url_))
+
+            return redirect(url_)
+
         @flask_admin.expose('/markdown_to_html', methods=('POST', ))
         def markdown_to_html(self):          # pylint: disable=no-self-use
 
@@ -626,6 +678,24 @@ def init_admin(app, db):
                 mimetype='text')
 
             return ret
+
+    return locals()
+        
+def init_admin(app, db):
+
+    login_manager = flask_login.LoginManager()
+    login_manager.init_app(app)
+
+    session = MODELS_GLOBAL_CONTEXT['session']
+
+    # ~ when defining this user_loader, we need an already initialized login_manager 
+    # ~ and an active db session
+    @login_manager.user_loader
+    def load_user(user_id):    # pylint: disable=unused-variable
+        return session.query(User).get(user_id)
+
+    # ~ we need an already initialized app (to access the app.config), when defining the ModelView classes
+    globals().update(define_view_classes(app))
 
     index_view_ = TrackerAdminResources(url='/')
 
