@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import os
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 # ~ ######################################
 # ~ main section
@@ -19,7 +20,7 @@ INSERT_USERS_IN_DB = True
 # ~ ######################################
 # ~ flask-admin section
 # ~ ######################################
-database_file_ = os.path.join('/opt/flask_tracker/data', 'tracker.v3.sqlite')
+database_file_ = os.path.join('/opt/flask_tracker-test/data', 'tracker.v3.sqlite')
 DEBUG = True
 ENV = 'development'
 TESTING = False
@@ -73,12 +74,7 @@ DEPARTMENTS = [
     ('electronics', 'Electronics'),
     ('lab', 'Lab'),]
 
-TASK_CATHEGORIES = [ (n, n) for n in ( 
-                        'fattibilita', 
-                        'pianificazione', 
-                        'design', 
-                        'prototipo', 
-                        'preserie')]
+TASK_CATHEGORIES = [ (n, n) for n in open(os.path.join(HERE, 'cathegories.txt')).readlines()]
 
 TASK_PRIORITIES = [
     ('low', 'Low'),

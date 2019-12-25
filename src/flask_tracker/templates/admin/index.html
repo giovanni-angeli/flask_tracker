@@ -112,6 +112,12 @@
                         <option name="{{ o }}">{{ o }}</option>
                         {% endfor %}
                     </select>
+                    <label for="selected_user"> Department: </label>
+                     <select multiple class="form-control" id="department" name="department">
+                        {% for o in departments %}
+                        <option name="{{ o }}">{{ o }}</option>
+                        {% endfor %}
+                    </select>
                     <p>
                         <div class="row">
                         <div class="col-sm-6"><button type="submit" formaction="/gantt" class="form-control btn-primary">view gantt</button></div>

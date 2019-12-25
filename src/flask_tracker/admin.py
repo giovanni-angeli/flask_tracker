@@ -501,6 +501,7 @@ def define_view_classes(app):
             milestone_names = sorted([o.name for o in session.query(Milestone).limit(50) if o.in_progress])
             user_names = sorted([o.name for o in session.query(User).limit(50)])
             cathegory_names = sorted([ n[0] for n in app.config.get('TASK_CATHEGORIES') ])
+            department_names = sorted([ n[0] for n in app.config.get('DEPARTMENTS') ])
 
             ctx = {
                 'projects': project_names,
@@ -508,6 +509,7 @@ def define_view_classes(app):
                 'milestones': milestone_names,
                 'users': user_names,
                 'cathegories': cathegory_names,
+                'departments': department_names,
                 'version': get_package_version(),
                 'assigned_task_names': assigned_task_names,
                 'task_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(task_filtered_views)],
