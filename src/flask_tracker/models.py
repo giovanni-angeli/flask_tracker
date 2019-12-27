@@ -55,13 +55,11 @@ def get_package_version():
     return ver
 
 
-def scan_for_models() -> dict:
+def get_models_map():
 
     t2m_map = MODELS_GLOBAL_CONTEXT['table_name2model_classes_map']
 
-    if t2m_map:
-        pass
-    else:
+    if t2m_map is None:
         for n in globals():
             m = globals().get(n)
             try:
@@ -74,19 +72,12 @@ def scan_for_models() -> dict:
             except Exception as e:
                 logging.error(e)
 
-    # ~ logging.warning(
-        # ~ " MODELS_GLOBAL_CONTEXT['table_name2model_classes_map']:{}".format(
-            # ~ MODELS_GLOBAL_CONTEXT['table_name2model_classes_map']))
-
-    return t2m_map
+    return MODELS_GLOBAL_CONTEXT['table_name2model_classes_map']
 
 
 def get_default_task_content():
 
-    # ~ logging.warning("args:{}, kwargs:{}".format(args, kwargs))
     return MODELS_GLOBAL_CONTEXT['app'].config.get("SAMPLE_TASK_CONTENT", " *** ")
-    # ~ return " AAA "
-    # ~ return self.default_content
 
 
 def generate_id():
@@ -376,9 +367,7 @@ def check_limit_before_insert(mapper, connection, target):  # pylint: disable=un
 
     to_be_deleted_object_list = MODELS_GLOBAL_CONTEXT['to_be_deleted_object_list']
 
-    self = target
-
-    exceeding_objects = self.check_size_limit()
+    exceeding_objects = target.check_size_limit()
 
     if exceeding_objects:
         logging.warning("exceeding_objects.count():{}".format(exceeding_objects.count()))
@@ -392,7 +381,7 @@ def install_listeners():
 
     db.event.listen(db.session, 'before_flush', do_delete_pending_objects)
 
-    for cls in scan_for_models().values():
+    for cls in get_models_map().values():
         if cls.row_count_limt > 0:
             db.event.listen(cls, 'before_insert', check_limit_before_insert)
 

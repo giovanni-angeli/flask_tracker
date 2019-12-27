@@ -30,7 +30,8 @@ INSTALL_REQUIRES = [
     'waitress',  # WSGI server (https://docs.pylonsproject.org/projects/waitress)
     'iso8601',
     'flask-login',
-    'markdown2',]
+    'Flask-WTF',
+    'markdown',]
 
 SETUP_KW_ARGS = {
     'name': 'flask_tracker',

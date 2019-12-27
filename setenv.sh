@@ -3,8 +3,8 @@
 #~ Source me to use them all
 export PYTHONDONTWRITEBYTECODE=1
 export FT_PROJECT_ROOT=/opt/PROJECTS/flask_tracker
-export FT_RUNCONF_ROOT=/opt/flask_tracker-test/conf
-export FT_VENV_ROOT=/opt/flask_tracker-test/venv
+export FT_RUNCONF_ROOT=/opt/flask_tracker/conf
+export FT_VENV_ROOT=/opt/flask_tracker/venv
 export | grep FT_
 mkdir -p ${FT_RUNCONF_ROOT}
 mkdir -p ${FT_VENV_ROOT}

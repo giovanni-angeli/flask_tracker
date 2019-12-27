@@ -11,14 +11,17 @@ import sys
 import logging
 import traceback
 
-from flask import Flask                    # pylint: disable=import-error
+from flask import Flask, url_for                    # pylint: disable=import-error
 
 from flask_tracker.models import init_orm
 from flask_tracker.admin import init_admin
 
+from flask_tracker.wiki.routes import bp as wiki_blueprint
+
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_FOLDER = os.path.join(HERE, "templates")
+STATIC_FOLDER = os.path.join(HERE, "static")
 
 
 def set_logging(log_level):
@@ -49,7 +52,9 @@ def parse_arg():
 
 def _init_app(argv):
 
-    app = Flask('FlaskTracker', template_folder=TEMPLATE_FOLDER)
+    logging.warning("__file__:{}".format(__file__))
+
+    app = Flask('FlaskTracker', template_folder=TEMPLATE_FOLDER, static_url_path="", static_folder=STATIC_FOLDER)
 
     sys.argv = argv
     options = parse_arg()
@@ -61,8 +66,8 @@ def _init_app(argv):
     db = init_orm(app)
     init_admin(app, db)
 
-    # ~ app._static_folder = os.path.join(HERE, 'static')
-    # ~ logging.warning("app._static_folder:{}".format(app._static_folder))
+    wiki_blueprint.template_folder = os.path.join(HERE, 'wiki', 'templates')
+    app.register_blueprint(wiki_blueprint, url_prefix='/wiki')
 
     return app
 
@@ -74,7 +79,6 @@ def initialize_instance():
     
     dst = sys.argv[1]
 
-    # ~ for file in glob.glob(r'C:/*.txt'):
     for file in glob.glob(os.path.join(HERE, "default_conf", '*.*')):
         logging.warning("copying {} in {}".format(file, dst))
         shutil.copy(file, dst)

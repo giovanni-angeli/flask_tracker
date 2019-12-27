@@ -1,31 +1,39 @@
 # coding: utf-8
 
 import os
-HERE = os.path.dirname(os.path.abspath(__file__))
+import pathlib
+
+HERE = pathlib.Path(__file__).parent
+cathegories_ = []
+with (HERE / "cathegories.txt").open('rt') as f: cathegories_ = f.readlines()
+
+DATA_PATH =  '/opt/flask_tracker/data'
+
+database_file_ = os.path.join(DATA_PATH, 'tracker.v3.sqlite')
+wiki_contents_dir_ = os.path.join(DATA_PATH, 'wiki')
 
 # ~ ######################################
 # ~ main section
 # ~ ######################################
-HOST = '127.0.0.1'
+HOST = '0.0.0.0'
 PORT = 12012
 LOG_LEVEL = 'WARNING'
 
 # ~ ######################################
 # ~ actions-at-start-up section
 # ~ ######################################
-INSERT_USERS_IN_DB = True
+# ~ INSERT_USERS_IN_DB = True
 # ~ POPULATE_SAMPLE_DB = 50
 # ~ FORCE_RESET_DB = True
 
 # ~ ######################################
 # ~ flask-admin section
 # ~ ######################################
-database_file_ = os.path.join('/opt/flask_tracker-test/data', 'tracker.v3.sqlite')
 DEBUG = True
 ENV = 'development'
-TESTING = False
+TESTING = True
 PROPAGATE_EXCEPTIONS = 'console'
-SECRET_KEY = os.environ.get('SECRET_KEY') or '1*3*5*7*0'
+SECRET_KEY = 'your-secret-KEY'
 DATABASE_FILE = database_file_
 SQLALCHEMY_DATABASE_URI = 'sqlite:///' + database_file_
 SQLALCHEMY_ECHO = False
@@ -33,13 +41,18 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
 # ~ ######################################
+# ~ wiki section
+# ~ ######################################
+ENABLE_WIKI = True
+WIKI_CONTENT_DIR = wiki_contents_dir_
+
+# ~ ######################################
 # ~ customization section
 # ~ ######################################
 MAX_OPEN_TASK_PER_USER = 30
-TASK_TAGS = ('TAG_0', 'TAG_1') 
 
 USERS = (
-    ('admin',    'admin', 'admin@the.company.com'   , 'admin', 5),
+    ('admin',    'admin', 'alfadispenser.com'   , 'admin', 5),
     ('test',    'test', ''   , 'guest', 0),
     ('anonymous',    '', ''   , 'guest', 0),)
 
@@ -74,12 +87,13 @@ DEPARTMENTS = [
     ('electronics', 'Electronics'),
     ('lab', 'Lab'),]
 
-TASK_CATHEGORIES = [ (n, n) for n in open(os.path.join(HERE, 'cathegories.txt')).readlines()]
-
 TASK_PRIORITIES = [
     ('low', 'Low'),
     ('high', 'High'),
     ('normal', 'Normal')]
+
+CATHEGORY_TOOLTIP_STRING = "info about how to use the semantic of the field 'cathegory'."
+TASK_CATHEGORIES = [ (l, l) for l in cathegories_ ]
 
 TASK_STATUSES = [
     ('new', 'New'),

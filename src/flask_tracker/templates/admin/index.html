@@ -1,7 +1,7 @@
 {% extends 'admin/master.html' %}
 
 {% block brand %}
-    <h4 id="brand" style="width:200px"> * {{ admin_view.name|capitalize }}</h4>
+    <h4 id="brand" style="width:200px"> Flask Tracker </h4>
     <div>ver.: {{ version }}</div>
     <style>
         .container {width: 96%;}
@@ -55,7 +55,7 @@
 {% if current_user.is_authenticated %}
 
     <div class="container-fluid">
-        <div class="row page-alfa">
+        <div class="row">
             <div class="col-sm-4 table-responsive">
                 <label> default fitered views:</label>
 
@@ -82,21 +82,9 @@
                 <form id="filtered_views_form" method="GET">
                     <input type="hidden" id="model_name" name="model_name" value="task">
                     </input>
-                    <label for="selected_project"> Project: </label>
-                    <select multiple class="form-control" id="project_project_name" name="project_project_name">
-                        {% for p in projects %}
-                        <option name="{{ p }}">{{ p }}</option>
-                        {% endfor %}
-                    </select>
-                    <label for="selected_order"> Order: </label>
-                    <select multiple class="form-control" id="order_order_name" name="order_order_name">
-                        {% for o in orders %}
-                        <option name="{{ o }}">{{ o }}</option>
-                        {% endfor %}
-                    </select>
-                    <label for="milestone_milestone_name"> Milestone: </label>
-                    <select multiple class="form-control" id="milestone_milestone_name" name="milestone_milestone_name">
-                        {% for o in milestones %}
+                    <label for="selected_user"> Department: </label>
+                     <select multiple class="form-control" id="department" name="department">
+                        {% for o in departments %}
                         <option name="{{ o }}">{{ o }}</option>
                         {% endfor %}
                     </select>
@@ -112,15 +100,26 @@
                         <option name="{{ o }}">{{ o }}</option>
                         {% endfor %}
                     </select>
-                    <label for="selected_user"> Department: </label>
-                     <select multiple class="form-control" id="department" name="department">
-                        {% for o in departments %}
+                    <label for="selected_project"> Project: </label>
+                    <select multiple class="form-control" id="project_project_name" name="project_project_name">
+                        {% for p in projects %}
+                        <option name="{{ p }}">{{ p }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="milestone_milestone_name"> Milestone: </label>
+                    <select multiple class="form-control" id="milestone_milestone_name" name="milestone_milestone_name">
+                        {% for o in milestones %}
+                        <option name="{{ o }}">{{ o }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="selected_order"> Order: </label>
+                    <select multiple class="form-control" id="order_order_name" name="order_order_name">
+                        {% for o in orders %}
                         <option name="{{ o }}">{{ o }}</option>
                         {% endfor %}
                     </select>
                     <p>
                         <div class="row">
-                        <div class="col-sm-6"><button type="submit" formaction="/gantt" class="form-control btn-primary">view gantt</button></div>
                         <div class="col-sm-6"><button type="submit" formaction="/filtered_view" class="form-control btn-primary">view task list</button></div>
                         </div>
                         <hr></hr>
@@ -128,10 +127,19 @@
                 </form>
             </div>
             <div class="col-sm-4 table-responsive">
+
+                <label for="add_task_button"> Add a New task </label>
+                <div>
+                    <button name="add_task_button" class="form-control btn-primary" onclick="window.open('/task/new/');"> New Task </button>
+                </div>
+
+                <hr></hr>
+                <hr></hr>
+
                 <label for="add_work_hrs_form"> Add Working Hours </label>
                 <form name="add_work_hrs_form" action="/add_a_working_time_slot" method='GET' id="add_work_hrs_form">
-                <label for="selected_task"> Task: </label>
-                    <select class="form-control" name="selected_task">
+                <label for="selected_task"> Task (tasks in progress, assigned to you): </label>
+                    <select class="form-control" name="selected_task" id="selected_task">
                         {% for t in assigned_task_names %}
                         <option name="{{ t }}">{{ t }}</option>
                         {% endfor %}
@@ -142,14 +150,6 @@
                     <input class="form-control" name="date" type="date" value="" id="input_date"></input>
                     <button class="form-control btn-primary" type="submit" onclick="add_hours_btn_clicked();">Add Hours</button>
                 </form>
-
-                <hr></hr>
-                <hr></hr>
-
-                <label for="add_task_button"> Add a New task </label>
-                <div>
-                    <button name="add_task_button" class="form-control btn-primary" onclick="window.open('/task/new/');"> New Task </button>
-                </div>
 
             </div>
         </div>
@@ -178,9 +178,12 @@
     }
     var add_hours_btn_clicked = function(){
         var hours_to_add = document.getElementById('hours_to_add').value;
+        var selected_task = document.getElementById('selected_task').value;
+        document.getElementById('add_work_hrs_form').action = "javascript:void(0)";
         if (hours_to_add <= 0) {
-            document.getElementById('add_work_hrs_form').action = "javascript:void(0)";
             alert("invalid number of hours");
+        } else if (!selected_task) {
+            alert("invalid task selected");
         } else {
             if (confirm('confirm adding hours?')) {
                 document.getElementById('add_work_hrs_form').action = "/add_a_working_time_slot";

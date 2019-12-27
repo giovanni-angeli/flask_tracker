@@ -19,3 +19,5 @@ package-lock.json
 __wheels__
 build
 dist
+
+*frappe-gantt*
