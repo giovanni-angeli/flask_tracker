@@ -15,19 +15,19 @@ with (HERE / "README.md").open('rt') as f:
     README = f.read()
 
 
-VERSION = '0.3.0rc7'
+VERSION = '0.3.0rc8'
 
 INSTALL_REQUIRES = [
-    'jsonschema',  # ==2.6.0
-    "futures",  # ==3.1.1
-    "requests",  # ==0.2.0
+    'jsonschema',  
+    "futures",  
+    "requests", 
     'sqlalchemy-utils',
     'flask',
     'flask_restful',
     'flask_admin',
     'flask_sqlalchemy',
-    'tablib',  # WSGI server (https://docs.pylonsproject.org/projects/waitress)
-    'waitress',  # WSGI server (https://docs.pylonsproject.org/projects/waitress)
+    'tablib', 
+    'waitress',
     'iso8601',
     'flask-login',
     'Flask-WTF',
@@ -61,6 +61,7 @@ SETUP_KW_ARGS = {
             'default_conf/*',
             'templates/*.html',
             'templates/*/*.html',
+            'wiki/templates/*.html',
             'static/*.*',
             'static/*/*.*',
             'static/*/*/*.*',
