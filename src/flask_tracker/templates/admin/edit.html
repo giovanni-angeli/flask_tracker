@@ -5,7 +5,6 @@
     <style>.container {width: 96%;}</style>
 {% endblock %}
 
-
 {% block access_control %}
 {% if current_user.is_authenticated %}
 <div class="btn-group pull-right">
@@ -19,98 +18,71 @@
 {% endif %}
 {% endblock %}
 
-
-{% block body %}
 {{ super() }}
 
-{% endblock body %}
 
 {% block tail %}
+{% if admin_view.name == 'Task' %}
 
+<script type="text/javascript" >
 
-    <script type="text/javascript" >
-        var refresh_preview_content = function(result, status, xhr){
-//~             console.log("result.responseText: " + result.responseText);
-            var url = "";
-            var title = "Task content preview";
-            var options = "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,zoomable=yes,width=800,height=600,top="+(200)+",left="+(240);
-            var html = '';
-            
-            html += '<html>';
-            html += '<head>';
-            html += '<title>Task - Preview</title>';
-            html += '<meta charset="UTF-8">';
-            html += '<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">';
-            html += '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
+    var g_original_content_style;
+    var refresh_preview = function(result, status, xhr) {
+        document.getElementById('content_preview').innerHTML = result.responseText;
+        document.getElementById('content_preview').hidden = false;
+        document.getElementById('content').hidden = true;
+        document.getElementById('content').style = "display:none;";
 
-            html += '<link href="/static/admin/bootstrap/bootstrap3/swatch/default/bootstrap.min.css?v=3.3.5" rel="stylesheet">';
-            html += '<link href="/static/admin/bootstrap/bootstrap3/css/bootstrap-theme.min.css?v=3.3.5" rel="stylesheet">';
-            html += '</head>';
-            html += '<style>';
-            html += '.body { ';
-            html += '      display: flex;';
-            html += '}';
-            html += '.preview_controls { ';
-            html += '      display: flex;';
-            html += '      justify-content: center;'; 
-            html += '      align-content: center;';
-            html += '      border: 1px solid #CCCCCC;';
-            html += '      background-color: #EEEEEE;';
-            html += '}';
-            html += '</style>';
-            html += '<body>';
-            html += '<div class="container">';
-            html += '<div class="preview_controls"><h4>Task content Preview:</h4></div>';
-            html += '<a href="https://daringfireball.net/projects/markdown/syntax" target="blank_"> Markdown syntax doc </a>';
-            html += "<hr></hr>";
-            html += '<div class="preview_controls"><button onclick="window.close();">CLOSE</button></div>';
-            html += "<hr></hr>";
-            html += "<div>";
-            html += result.responseText;
-            html += "</div>";
-            html += '</div>';
-            html += "</body>";
-            html += '</html>';
-            var win = window.open(url, title, options);
-            win.document.body.innerHTML = html;
-        }
-        var preview_content = function() {
-            var e = document.getElementById("content");
-            console.log("content: " + e.value);
-            var data = {'content': e.value};
+        console.log("refresh_preview() g_original_content_style=" + g_original_content_style);
+    }
+
+    var preview_button_clicked = function() {
+        if (document.getElementById('content_preview').hidden) {
+            var data = {'content': document.getElementById('content').value};
             $.ajax({
                 data: JSON.stringify(data),
                 dataType: "json",
-                success: refresh_preview_content,
-                error: refresh_preview_content,
+                success: refresh_preview,
+                error: refresh_preview,
                 contentType: "application/json",
                 timeout: 5000,
                 url: '/markdown_to_html',
                 method: 'POST'
             });
+        } else if (document.getElementById('content').hidden) {
+            document.getElementById('content').hidden = false;
+            document.getElementById('content').style.cssText = g_original_content_style;
+            document.getElementById('content_preview').hidden = true;
         }
-        var enlarge_content = function(){
-            var e1 = document.getElementById("content");
-            if(e1.wide) {e1.rows = 12; e1.wide = false;}
-            else {e1.rows = 24; e1.wide = true;}
-        }
-        $(document).ready(function() {
-            var e = document.getElementById("preview_content_button");
-            if (e) {
-                e.addEventListener("click", preview_content);
-            }
-            var e1 = document.getElementById("content");
-            if (e1) {
-                e1.addEventListener("click", enlarge_content);
-            }
-            var e_c = document.getElementById("cathegory");
-            if (e_c) {
-                e_c.title = "{{ form.cathegory_tooltip_string }}";
-            }
-        });
-    </script>
+        console.log("preview_button_clicked()");
+    };
 
+    var init = function() {
+
+        document.getElementById("preview_content_button").onclick = preview_button_clicked;
+
+        var e_a = document.getElementById("formatted_attach_names");
+        if (e_a) {
+            e_a.innerHTML = "";
+            {% for name in model.formatted_attach_names %}
+                e_a.value += "[{{ name }}]({{url_for('attachment', filename=name)}})\n";
+            {% endfor %}
+        }
+        g_original_content_style = document.getElementById('content').style.cssText;
+        e = document.createElement('div')
+        e.id = 'content_preview';
+        e.hidden = true;
+        e.setAttribute("style", "background:#FFFFEE; border:dashed #333333 1px;");
+        document.getElementById('content').parentNode.appendChild(e);
+
+        console.log("init()");
+    }
+
+    init();
+
+</script>
+
+{% endif %}
 {% endblock tail %}
-
 
 

@@ -5,7 +5,6 @@
     <style>.container {width: 96%;}</style>
 {% endblock %}
 
-
 {% block access_control %}
 {% if current_user.is_authenticated %}
 <div class="btn-group pull-right">
@@ -18,7 +17,6 @@
 </div>
 {% endif %}
 {% endblock %}
-
 
 {{ super() }}
 

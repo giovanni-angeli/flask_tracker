@@ -1,9 +1,9 @@
 # coding: utf-8
 
-from functools import wraps
-
 from flask import (Blueprint, flash, redirect, render_template, request, url_for, current_app)
 from flask_login import current_user
+
+from flask_tracker.admin import protect
 
 from flask_tracker.wiki.core import Processor
 from flask_tracker.wiki.forms import (EditorForm, SearchForm, URLForm)
@@ -11,15 +11,6 @@ from flask_tracker.wiki import current_wiki
 
 
 bp = Blueprint('wiki', __name__)
-
-def protect(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if current_app.config.get('PRIVATE') and not current_user.is_authenticated():
-            return current_app.login_manager.unauthorized()
-        return f(*args, **kwargs)
-    return wrapper
-
 
 @bp.route('/')
 @protect

@@ -15,6 +15,8 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash  # pylint: disable=import-error
 import flask_sqlalchemy              # pylint: disable=import-error
 
+from flask import Markup  # pylint: disable=import-error
+
 sqlalchemy_db_ = flask_sqlalchemy.SQLAlchemy()
 sqlalchemy_session_ = None
 sqlalchemy_Model = sqlalchemy_db_.Model
@@ -323,6 +325,12 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
         return self.id
 
 
+class Attachment(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
+
+    db = MODELS_GLOBAL_CONTEXT['db']
+
+    attached_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
+    
 class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
@@ -339,6 +347,8 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     planned_time = db.Column(db.Float, default=0.00, doc='hours')
 
     worktimes = db.relationship('WorkTime', backref='task')
+    attachments = db.relationship('Attachment', backref='attached')
+
     followers = db.relationship('User', secondary=followings, backref='followed')
 
     project_id = db.Column(db.Unicode, db.ForeignKey('project.id'))
@@ -349,7 +359,15 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     parent_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
     parent = db.relationship("Task", remote_side=[id])
 
+    @property
+    def formatted_attach_names(self):
+        return [Markup(a.name) for a in self.attachments]
 
+    @formatted_attach_names.setter
+    def formatted_attach_names(self, val):
+        pass
+
+        
 def do_delete_pending_objects(session, flush_context, instances=None):  # pylint: disable=unused-argument
 
     to_be_deleted_object_list = MODELS_GLOBAL_CONTEXT['to_be_deleted_object_list']

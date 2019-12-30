@@ -8,16 +8,20 @@
 # pylint: disable=too-many-locals
 # pylint: disable=broad-except
 
+import os
 import logging
 import traceback
 import json
 import time
 from datetime import datetime, timezone, timedelta
 from urllib.parse import quote
+from functools import wraps
+
 import markdown  # pylint: disable=import-error
+from werkzeug import secure_filename
 from werkzeug.security import check_password_hash  # pylint: disable=import-error
 from jinja2 import contextfunction   # pylint: disable=import-error
-from flask import (Markup, url_for, redirect, request, current_app)  # pylint: disable=import-error
+from flask import (Markup, url_for, redirect, request, current_app, send_from_directory)  # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
 import flask_login  # pylint: disable=import-error
 import flask_admin  # pylint: disable=import-error
@@ -33,6 +37,7 @@ from flask_tracker.models import (
     Order,
     User,
     WorkTime,
+    Attachment,
     MODELS_GLOBAL_CONTEXT,
     get_package_version)
 
@@ -74,6 +79,16 @@ def compile_filtered_url(model_name, filters):
     return url_
 
 
+def protect(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not flask_login.current_user.is_authenticated:
+            return redirect(url_for('admin.login'))
+        return f(*args, **kwargs)
+
+    return wrapper
+
+
 class LoginForm(form.Form):
 
     login = fields.StringField(validators=[validators.DataRequired()])
@@ -101,27 +116,25 @@ class LoginForm(form.Form):
         return session.query(User).filter_by(name=self.login.data).first()
 
 
-class TrackerAdminResources(flask_admin.AdminIndexView):  
+class TrackerAdminResources(flask_admin.AdminIndexView):
 
     @flask_admin.expose("/")
     @flask_admin.expose("/home")
     @flask_admin.expose("/index")
+    @protect
     def index(self, ):
 
         t0 = time.time()
-
-        if not flask_login.current_user.is_authenticated:
-            return redirect(url_for('.login'))
 
         session = MODELS_GLOBAL_CONTEXT['session']
 
         start_of_the_week = get_start_of_week()
         start_of_the_month = get_start_of_month()
         user_name = flask_login.current_user.name
-        
+
         MAX_OPEN_TASK_PER_USER = current_app.config.get('MAX_OPEN_TASK_PER_USER', 20)
         TASK_CATHEGORIES = current_app.config.get('TASK_CATHEGORIES', [])
-        DEPARTMENTS     = current_app.config.get('DEPARTMENTS', [])     
+        DEPARTMENTS = current_app.config.get('DEPARTMENTS', [])
 
         assigned_task_names = ["{}::{}".format(t.name, t.description or "")[:64] for t in session.query(Task).filter(Task.status == 'in_progress').filter(
             Task.assignee_id == flask_login.current_user.id).limit(MAX_OPEN_TASK_PER_USER)]
@@ -171,9 +184,6 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
     @flask_admin.expose('/login/', methods=('GET', 'POST'))
     def login(self):
 
-        # ~ logging.warning("")
-
-        # handle user login
         form_ = LoginForm(request.form)
 
         logging.warning("form_:{}".format(form_))
@@ -198,6 +208,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return redirect(url_for('.index'))
 
     @flask_admin.expose('/add_a_working_time_slot', methods=('GET', ))
+    @protect
     def add_a_working_time_slot(self):    # pylint: disable=no-self-use
 
         if not flask_login.current_user.is_authenticated:
@@ -225,17 +236,8 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
 
         return redirect(url_)
 
-    @flask_admin.expose('/gantt', methods=('GET', 'POST'))
-    def gantt_page(self):
-
-        logging.warning("request.form:{}".format(request.form))
-
-        ctx = {
-            'form': request.form,
-        }
-        return self.render("admin/gantt_page.html", **ctx)
-
     @flask_admin.expose('/report', methods=('GET', 'POST'))
+    @protect
     def report_query(self):
 
         session = MODELS_GLOBAL_CONTEXT['session']
@@ -261,12 +263,6 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
                 'time_s': time.asctime(),
                 'report_title': "",
                 'results': [
-                    [time.asctime(), time.asctime(), time.asctime()],
-                    [time.asctime(), time.asctime(), time.asctime()],
-                    [time.asctime(), time.asctime(), time.asctime()],
-                    [time.asctime(), time.asctime(), time.asctime()],
-                    [time.asctime(), time.asctime(), time.asctime()],
-                    [time.asctime(), time.asctime(), time.asctime()],
                 ],
             }
 
@@ -278,6 +274,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return ret
 
     @flask_admin.expose('/filtered_view', methods=('GET', 'POST'))
+    @protect
     def filtered_view(self):          # pylint: disable=no-self-use
 
         filters = []
@@ -292,6 +289,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return redirect(url_)
 
     @flask_admin.expose('/markdown_to_html', methods=('POST', ))
+    @protect
     def markdown_to_html(self):          # pylint: disable=no-self-use
 
         try:
@@ -525,7 +523,10 @@ def define_view_classes(app):
 
     class TaskView(TrackerModelView):     # pylint: disable=unused-variable
 
+        # ~ edit_template = 'admin/edit_task.html'
+
         # ~ can_delete = False
+        # ~ column_details_list = ()
 
         column_searchable_list = (
             'description',
@@ -533,11 +534,8 @@ def define_view_classes(app):
         )
 
         form_args = {
-            # ~ 'description': {
-            # ~ 'description': 'NOTE: you can use this field also for TAGS {}'.format(app.config.get('TASK_TAGS')),
-            # ~ },
             'cathegory': {
-                'description': 'see <a href="/wiki/stage-gate/">this wiki page: *Linea Guida: Modello stage-gate*</a>',
+                'description': app.config.get('CATHEGORY_DESCRIPTION', 'missing description.'),
             },
         }
 
@@ -597,9 +595,9 @@ def define_view_classes(app):
             'milestone',
             'order',
             'parent',
-            'followers',
             'assignee',
-            # ~ 'related_tasks',
+            'followers',
+            # ~ 'attachments',
             # ~ 'content',
         )
 
@@ -618,15 +616,19 @@ def define_view_classes(app):
 
         def get_edit_form(self):
 
-            form_ = super(TaskView, self).get_edit_form()
+            form_ = super().get_edit_form()
 
-            cnt_description = 'NOTE: you can use Markdown syntax (https://daringfireball.net/projects/markdown/syntax). Use preview button to see what you get.'
-            form_.content = fields.TextAreaField('* content *', [validators.optional(), validators.length(max=1000)],
-                                                 description=cnt_description, render_kw={"rows": 12, "style": "background:#fff; border:dashed #bc2122 1px; height:auto;"})
+            form_.formatted_attach_names = fields.TextAreaField(
+                'attachment urls', render_kw=dict(value="*", disabled=True))
+
+            cnt_description = Markup(
+                'NOTE: you can use <a target="blank_" href="https://daringfireball.net/projects/markdown/syntax">Markdown syntax</a>. Use preview button to see what you get.')
+
+            form_.content = fields.TextAreaField('content', [validators.optional(), validators.length(max=1000)],
+                                                 description=cnt_description,
+                                                 render_kw={"style": "background:#fff; border:dashed #DD3333 1px; height:480px;"})
 
             form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={})
-
-            setattr(form_, 'cathegory_tooltip_string', Markup(app.config.get('CATHEGORY_TOOLTIP_STRING')))
 
             return form_
 
@@ -636,6 +638,8 @@ def define_view_classes(app):
             if name == 'content':
                 ret = markdown.markdown(ret)
                 ret = Markup(ret)
+            elif name == 'attachments':
+                ret = model.formatted_attach_names
             return ret
 
         def on_model_change(self, form_, obj, is_created):
@@ -650,8 +654,7 @@ def define_view_classes(app):
 
             if obj == obj.parent:
                 obj.parent = None
-                # ~ flash('NOTE: cannot make task {} parent of itself.'.format(obj.name))
-                msg = 'NOTE: cannot make task {} parent of itself.'.format(obj.name)
+                msg = 'Cannot make task {} parent of itself.'.format(obj.name)
                 raise validators.ValidationError(msg)
 
             if hasattr(form_, 'status') and form_.status:
@@ -663,6 +666,58 @@ def define_view_classes(app):
                         raise validators.ValidationError(msg)
 
             ret = super(TaskView, self).on_model_change(form, obj, is_created)
+
+            logging.warning("obj.content:{}".format(obj.content))
+
+            return ret
+
+    class AttachmentView(TrackerModelView):     # pylint: disable=unused-variable
+
+        form_args = {
+            'attached': {
+                'label': 'attached task',
+            },
+        }
+
+        column_filters = (
+            'name',
+            'date_modified',
+            'description',
+            'attached.name'
+        )
+
+        def get_create_form(self):
+
+            form_ = super().get_create_form()
+            form_.document = fields.FileField(u'Document')
+
+            del form_.name
+
+            return form_
+
+        def after_model_delete(self, obj):
+
+            ATTACHMENT_PATH = current_app.config.get('ATTACHMENT_PATH')
+
+            stored_filename = os.path.join(ATTACHMENT_PATH, obj.name)
+            if os.path.exists(stored_filename):
+                os.remove(stored_filename)
+
+            return super().after_model_delete(obj)
+
+        def on_model_change(self, form_, obj, is_created):
+
+            ATTACHMENT_PATH = current_app.config.get('ATTACHMENT_PATH')
+
+            if hasattr(form_, 'document') and form_.document:
+
+                if form_.document.data:
+                    filename = secure_filename(form_.document.data.filename)
+                    stored_filename = os.path.join(ATTACHMENT_PATH, filename)
+                    form_.document.data.save(stored_filename)
+                    obj.name = filename
+
+            ret = super().on_model_change(form_, obj, is_created)
             return ret
 
     return locals()
@@ -691,10 +746,16 @@ def init_admin(app, db):
     admin_.add_view(ProjectView(Project, db.session))         # pylint: disable=undefined-variable
     admin_.add_view(MilestoneView(Milestone, db.session))     # pylint: disable=undefined-variable
     admin_.add_view(OrderView(Order, db.session))             # pylint: disable=undefined-variable
+    admin_.add_view(AttachmentView(Attachment, db.session))    # pylint: disable=undefined-variable
+
     admin_.add_view(TrackerModelView(Customer, db.session, category="admin"))    # pylint: disable=undefined-variable
     admin_.add_view(UserView(User, db.session, category="admin"))    # pylint: disable=undefined-variable
     admin_.add_view(WorkTimeView(WorkTime, db.session, category="admin"))    # pylint: disable=undefined-variable
 
     admin_.add_link(MenuLink(name='Wiki', url='/wiki/'))
+
+    @app.route('/attachment/<path:filename>')
+    def attachment(filename):
+        return send_from_directory(app.config['ATTACHMENT_PATH'], filename)
 
     return admin_

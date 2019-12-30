@@ -11,7 +11,7 @@ import sys
 import logging
 import traceback
 
-from flask import Flask, url_for                    # pylint: disable=import-error
+from flask import Flask, url_for  # pylint: disable=import-error
 
 from flask_tracker.models import init_orm
 from flask_tracker.admin import init_admin
