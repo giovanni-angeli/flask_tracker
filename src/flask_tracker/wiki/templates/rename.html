@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Move a page{% endblock title %}
+{% block title %}Rename a page{% endblock title %}
 {% block content %}
 <form method="POST" class="form-inline">
     {{ form.hidden_tag() }}
     {{ input(form.url, placeholder="New URL of the page", autocomplete="off") }}
-    <input type="submit" class="btn btn-success" value="Create">
+    <input type="submit" class="btn btn-success" value="Rename">
 </form>
 {% endblock content %}
 

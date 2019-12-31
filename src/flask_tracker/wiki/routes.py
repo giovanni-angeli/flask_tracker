@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import logging
+
 from flask import (Blueprint, flash, redirect, render_template, request, url_for, current_app)
 from flask_login import current_user
 
@@ -33,6 +35,22 @@ def index():
 def display(url):
     page = current_wiki.get_or_404(url)
     return render_template('page.html', page=page)
+
+
+@bp.route('/clone/<path:url>/', methods=['GET', 'POST'])
+@protect
+def clone(url):
+
+    page = current_wiki.get_or_404(url)
+    page.url += "-clone"
+    form = URLForm(obj=page)
+    if form.validate_on_submit():
+        newurl = form.url.data
+        current_wiki.clone(url, newurl)
+        msg = '"%s" was cloned to "%s".' % (url, newurl)
+        flash(msg, 'success')
+        return redirect(url_for('wiki.display', url=newurl))
+    return render_template('clone.html', form=form, page=page)
 
 
 @bp.route('/create/', methods=['GET', 'POST'])
@@ -69,16 +87,17 @@ def preview():
     return data['html']
 
 
-@bp.route('/move/<path:url>/', methods=['GET', 'POST'])
+@bp.route('/rename/<path:url>/', methods=['GET', 'POST'])
 @protect
-def move(url):
+def rename(url):
     page = current_wiki.get_or_404(url)
     form = URLForm(obj=page)
     if form.validate_on_submit():
         newurl = form.url.data
-        current_wiki.move(url, newurl)
+        current_wiki.rename(url, newurl)
+        flash('"%s" was renamed to "%s".' % (page.title, newurl), 'success')
         return redirect(url_for('wiki.display', url=newurl))
-    return render_template('move.html', form=form, page=page)
+    return render_template('rename.html', form=form, page=page)
 
 
 @bp.route('/delete/<path:url>/')

@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import os
+import logging
 import re
 from collections import OrderedDict
 from io import open
@@ -264,7 +265,7 @@ class Wiki(object):
             return False
         return Page(path, url, new=True)
 
-    def move(self, url, newurl):
+    def _clone_rename_helper(self, url, newurl):
         source = os.path.join(self.root, url) + '.md'
         target = os.path.join(self.root, newurl) + '.md'
         # normalize root path (just in case somebody defined it absolute,
@@ -283,6 +284,20 @@ class Wiki(object):
         folder = os.path.dirname(target)
         if not os.path.exists(folder):
             os.makedirs(folder)
+
+        return source, target
+
+    def clone(self, url, newurl):
+
+        source, target = self._clone_rename_helper(url, newurl)
+        os.system("cp {} {}".format(source, target))
+
+        _clone = self.get(newurl)
+        _clone.title += ' (clone)'
+        _clone.save()
+
+    def rename(self, url, newurl):
+        source, target = self._clone_rename_helper(url, newurl)
         os.rename(source, target)
 
     def delete(self, url):
