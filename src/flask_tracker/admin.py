@@ -21,7 +21,7 @@ import markdown  # pylint: disable=import-error
 from werkzeug import secure_filename
 from werkzeug.security import check_password_hash  # pylint: disable=import-error
 from jinja2 import contextfunction   # pylint: disable=import-error
-from flask import (Markup, url_for, redirect, request, current_app, send_from_directory)  # pylint: disable=import-error
+from flask import (flash, Markup, url_for, redirect, request, current_app, send_from_directory)  # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
 import flask_login  # pylint: disable=import-error
 import flask_admin  # pylint: disable=import-error
@@ -157,7 +157,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
              compile_filtered_url('worktime', [('date', 'greater_than', start_of_the_month), ('user_user_name', 'equals', user_name)])),
         ]
 
-        project_names = sorted([o.name for o in session.query(Project).limit(50) if o.in_progress])
+        project_names = sorted([o.name for o in session.query(Project).limit(50)])
         order_names = sorted([o.name for o in session.query(Order).limit(50) if o.in_progress])
         milestone_names = sorted([o.name for o in session.query(Milestone).limit(50) if o.in_progress])
         user_names = sorted([o.name for o in session.query(User).limit(50)])
@@ -427,6 +427,8 @@ def define_view_classes(app):
 
         column_editable_list = (
             # ~ 'project',
+            'name',
+            'project',
             'start_date',
             'due_date',
         )
@@ -435,9 +437,11 @@ def define_view_classes(app):
             'start_date',
             'due_date',
             'tasks',
+            'project.name',
         )
 
         column_list = (
+            'project',
             'name',
             'start_date',
             'due_date',
@@ -468,7 +472,7 @@ def define_view_classes(app):
     class UserView(TrackerModelView):     # pylint: disable=unused-variable
 
         can_create = False
-        can_delete = False
+        # ~ can_delete = False
 
         form_args = {
             'email': {
@@ -513,7 +517,7 @@ def define_view_classes(app):
             total = sum([h.duration for h in obj.worktimes if h.date >= start_of_the_week])
             return Markup("%.2f" % total)
 
-        column_formatters = TrackerModelView.column_formatters
+        column_formatters = TrackerModelView.column_formatters.copy()
 
         column_formatters.update({
             'worktimes': display_worked_hours,
@@ -550,8 +554,9 @@ def define_view_classes(app):
             'name',
             'status',
             'milestone',
+            'department',
             'order',
-            'project',
+            # ~ 'project',
             'priority',
             'cathegory',
             'parent',
@@ -578,7 +583,7 @@ def define_view_classes(app):
             'department',
             'cathegory',
             'assignee.name',
-            'project.name',
+            # ~ 'project.name',
             'milestone.name',
             'order.name',
         )
@@ -590,7 +595,7 @@ def define_view_classes(app):
             'status',
             'priority',
             'cathegory',
-            'project',
+            # ~ 'project',
             'department',
             'milestone',
             'order',
@@ -608,7 +613,7 @@ def define_view_classes(app):
             total = sum([h.duration for h in obj.worktimes])
             return Markup("%.2f" % total)
 
-        column_formatters = TrackerModelView.column_formatters
+        column_formatters = TrackerModelView.column_formatters.copy()
 
         column_formatters.update({
             'worktimes': display_worked_hours,

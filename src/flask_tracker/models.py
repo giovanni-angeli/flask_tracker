@@ -245,11 +245,7 @@ class NamedModel(BaseModel):
 class Project(NamedModel, sqlalchemy_Model):  # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
-    tasks = db.relationship('Task', backref='project')
-
-    @property
-    def in_progress(self):
-        return len([t for t in self.tasks if t.status == 'in_progress']) > 0
+    milestones = db.relationship('Milestone', backref='project')
 
 
 class Customer(NamedModel, sqlalchemy_Model):   # pylint: disable=too-few-public-methods
@@ -274,6 +270,7 @@ class Order(NamedModel, sqlalchemy_Model):    # pylint: disable=too-few-public-m
     def in_progress(self):
         return len([t for t in self.tasks if t.status == 'in_progress']) > 0
 
+
 class Milestone(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
@@ -281,9 +278,17 @@ class Milestone(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-pub
     due_date = db.Column(db.Date, default=datetime.utcnow)
     tasks = db.relationship('Task', backref='milestone')
 
+    project_id = db.Column(db.Unicode, db.ForeignKey('project.id'))
+
+    name = db.Column(db.Unicode(64), nullable=False)
+    sqlalchemy_db_.UniqueConstraint('name', 'project_id')
+
     @property
     def in_progress(self):
         return len([t for t in self.tasks if t.status == 'in_progress']) > 0
+
+    def __str__(self):
+        return Markup("{}.{}".format(self.project, self.name))
 
 
 class WorkTime(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
@@ -298,7 +303,7 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
 
     db = MODELS_GLOBAL_CONTEXT['db']
 
-    email = db.Column(db.Unicode(32))
+    email = db.Column(db.Unicode(64))
     password = db.Column(db.Unicode(128))
     role = db.Column(db.Unicode(32), default='guest')
     worktimes = db.relationship('WorkTime', backref='user')
@@ -330,7 +335,8 @@ class Attachment(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-pu
     db = MODELS_GLOBAL_CONTEXT['db']
 
     attached_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
-    
+
+
 class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
@@ -351,7 +357,6 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
 
     followers = db.relationship('User', secondary=followings, backref='followed')
 
-    project_id = db.Column(db.Unicode, db.ForeignKey('project.id'))
     order_id = db.Column(db.Unicode, db.ForeignKey('order.id'))
     milestone_id = db.Column(db.Unicode, db.ForeignKey('milestone.id'))
     assignee_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
@@ -367,7 +372,7 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     def formatted_attach_names(self, val):
         pass
 
-        
+
 def do_delete_pending_objects(session, flush_context, instances=None):  # pylint: disable=unused-argument
 
     to_be_deleted_object_list = MODELS_GLOBAL_CONTEXT['to_be_deleted_object_list']
@@ -416,7 +421,7 @@ def setup_orm(app):
     db_ver = os.path.basename(db_path).split('.')[1]
 
     assert db_ver == "v{}".format(p_ver_maj), "db version:{} is not supported by release:{}".format(db_ver, p_ver)
-    
+
     db_base_path = os.path.dirname(db_path)
     if not os.path.exists(db_base_path):
         os.makedirs(db_base_path)
