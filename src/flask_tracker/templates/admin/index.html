@@ -88,15 +88,21 @@
                         <option name="{{ o }}">{{ o }}</option>
                         {% endfor %}
                     </select>
-                    <label for="selected_user"> Category: </label>
-                    <select multiple class="form-control" id="cathegory" name="cathegory">
-                        {% for o in cathegories %}
+                    <label for="category"> Category: </label>
+                    <select multiple class="form-control" id="category" name="category">
+                        {% for o in categories %}
                         <option name="{{ o }}">{{ o }}</option>
                         {% endfor %}
                     </select>
                     <label for="selected_user"> Assignee: </label>
                     <select multiple class="form-control" id="assignee_user_name" name="assignee_user_name">
                         {% for o in users %}
+                        <option name="{{ o }}">{{ o }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="project_name"> Project: </label>
+                    <select multiple class="form-control" id="project_name" name="project_name">
+                        {% for o in projects %}
                         <option name="{{ o }}">{{ o }}</option>
                         {% endfor %}
                     </select>

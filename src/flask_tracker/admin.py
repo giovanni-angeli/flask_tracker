@@ -62,7 +62,7 @@ def get_start_of_month():
 
 def compile_filtered_url(model_name, filters):
 
-    # ~ "/task/?flt2_project_project_name_in_list=a%2Cg"
+    # ~ /task/?flt1_project_name_contains=lask
     url_ = "/{}/?".format(model_name)
     filter_as_strings = []
     for n, (f_name, opr, arg) in enumerate(filters):
@@ -133,8 +133,10 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         user_name = flask_login.current_user.name
 
         MAX_OPEN_TASK_PER_USER = current_app.config.get('MAX_OPEN_TASK_PER_USER', 20)
-        TASK_CATHEGORIES = current_app.config.get('TASK_CATHEGORIES', [])
+        TASK_CATEGORIES = current_app.config.get('TASK_CATEGORIES', [])
         DEPARTMENTS = current_app.config.get('DEPARTMENTS', [])
+        
+        logging.warning("TASK_CATEGORIES:{}".format(TASK_CATEGORIES))
 
         assigned_task_names = ["{}::{}".format(t.name, t.description or "")[:64] for t in session.query(Task).filter(Task.status == 'in_progress').filter(
             Task.assignee_id == flask_login.current_user.id).limit(MAX_OPEN_TASK_PER_USER)]
@@ -161,7 +163,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         order_names = sorted([o.name for o in session.query(Order).limit(50) if o.in_progress])
         milestone_names = sorted([o.name for o in session.query(Milestone).limit(50) if o.in_progress])
         user_names = sorted([o.name for o in session.query(User).limit(50)])
-        cathegory_names = sorted([n[0] for n in TASK_CATHEGORIES])
+        category_names = sorted([n[0] for n in TASK_CATEGORIES])
         department_names = sorted([n[0] for n in DEPARTMENTS])
 
         ctx = {
@@ -169,7 +171,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             'orders': order_names,
             'milestones': milestone_names,
             'users': user_names,
-            'cathegories': cathegory_names,
+            'categories': category_names,
             'departments': department_names,
             'version': get_package_version(),
             'assigned_task_names': assigned_task_names,
@@ -534,12 +536,12 @@ def define_view_classes(app):
 
         column_searchable_list = (
             'description',
-            'cathegory',
+            'category',
         )
 
         form_args = {
-            'cathegory': {
-                'description': app.config.get('CATHEGORY_DESCRIPTION', 'missing description.'),
+            'category': {
+                'description': app.config.get('CATEGORY_DESCRIPTION', 'missing description.'),
             },
         }
 
@@ -547,7 +549,7 @@ def define_view_classes(app):
             'department': app.config.get('DEPARTMENTS'),
             'status': app.config.get('TASK_STATUSES'),
             'priority': app.config.get('TASK_PRIORITIES'),
-            'cathegory': app.config.get('TASK_CATHEGORIES'),
+            'category': app.config.get('TASK_CATEGORIES'),
         }
 
         column_list = (
@@ -558,7 +560,7 @@ def define_view_classes(app):
             'order',
             # ~ 'project',
             'priority',
-            'cathegory',
+            'category',
             'parent',
             'date_created',
             'assignee',
@@ -569,7 +571,7 @@ def define_view_classes(app):
 
         column_editable_list = (
             'assignee',
-            'cathegory',
+            'category',
             'priority',
             'followers',
             'status',
@@ -581,10 +583,11 @@ def define_view_classes(app):
             'date_modified',
             'description',
             'department',
-            'cathegory',
+            'category',
             'assignee.name',
             # ~ 'project.name',
             'milestone.name',
+            'milestone.project',
             'order.name',
         )
 
@@ -594,7 +597,7 @@ def define_view_classes(app):
             'assignee',
             'status',
             'priority',
-            'cathegory',
+            'category',
             # ~ 'project',
             'department',
             'milestone',

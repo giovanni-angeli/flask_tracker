@@ -11,8 +11,8 @@ def slugify(text):
     return re.sub(r'[\W_]+', '-', text)
 
 HERE = pathlib.Path(__file__).parent
-cathegories_ = []
-with (HERE / "cathegories.txt").open('rt') as f: cathegories_ = [l.strip() for l in f.readlines()]
+categories_ = []
+with (HERE / "categories.txt").open('rt') as f: categories_ = [l.strip() for l in f.readlines()]
 
 DATA_PATH =  '/opt/flask_tracker/data'
 
@@ -99,8 +99,8 @@ TASK_PRIORITIES = [
     ('high', 'High'),
     ('normal', 'Normal')]
 
-CATHEGORY_TOOLTIP_STRING = "info about how to use the semantic of the field 'cathegory'."
-TASK_CATHEGORIES = [ (slugify(l), l.capitalize()) for l in cathegories_ ]
+CATEGORY_TOOLTIP_STRING = "info about how to use the semantic of the field 'category'."
+TASK_CATEGORIES = [ (slugify(l), l.capitalize()) for l in categories_ ]
 
 TASK_STATUSES = [
     ('new', 'New'),
