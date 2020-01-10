@@ -474,11 +474,16 @@ def define_view_classes(app):
     class UserView(TrackerModelView):     # pylint: disable=unused-variable
 
         can_create = False
-        # ~ can_delete = False
+        can_delete = False
+
+        column_labels = dict(followed='Followed Tasks')
 
         form_args = {
             'email': {
                 'validators': [validators.Email()],
+            },
+            'followed': {
+                'label': 'Followed Tasks',
             },
         }
 
@@ -513,10 +518,16 @@ def define_view_classes(app):
 
         def display_worked_hours(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
 
-            today = datetime.now().date()
+            session = MODELS_GLOBAL_CONTEXT['session']
+
+            logged_users = session.query(User).filter(User.is_authenticated == True).all()
+
+            logging.warning("logged_users:{}".format(logged_users))
+
+            today = datetime.now()
             start_of_the_week = today - timedelta(days=today.weekday())
 
-            total = sum([h.duration for h in obj.worktimes if h.date >= start_of_the_week])
+            total = sum([h.duration for h in obj.worktimes if h.date_created >= start_of_the_week])
             return Markup("%.2f" % total)
 
         column_formatters = TrackerModelView.column_formatters.copy()
@@ -535,6 +546,7 @@ def define_view_classes(app):
         # ~ column_details_list = ()
 
         column_searchable_list = (
+            'name',
             'description',
             'category',
         )
@@ -553,19 +565,18 @@ def define_view_classes(app):
         }
 
         column_list = (
-            'name',
-            'status',
             'milestone',
+            'name',
+            'description',
+            'assignee',
+            'status',
+            'category',
             'department',
             'order',
-            # ~ 'project',
             'priority',
-            'category',
             'parent',
             'date_created',
-            'assignee',
             'followers',
-            'description',
             'worktimes',
         )
 
