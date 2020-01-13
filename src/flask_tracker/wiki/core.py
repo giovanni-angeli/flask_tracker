@@ -163,22 +163,30 @@ class Processor(object):
 
 
 class Page(object):
-    def __init__(self, path, url, new=False):
+    def __init__(self, path, url, new=False, just_meta=False):
         self.path = path
         self.url = url
         self._meta = OrderedDict()
         if not new:
-            self.load()
-            self.render()
+            self._load(just_meta)
 
     def __repr__(self):
         return u"<Page: {}@{}>".format(self.url, self.path)
 
-    def load(self):
+    def _load(self, just_meta=False):
         with open(self.path, 'r', encoding='utf-8') as f:
-            self.content = f.read()
+            logging.warning("self.path:{}, just_meta:{}".format(self.path, just_meta))
+            if just_meta:
+                lines = []
+                for l in f.readlines():
+                    logging.warning("self.path:{}, l:{}".format(self.path, l))
+                    lines.append(l)
+                    if not ':' in l:
+                        break
+                self.content = '\n'.join(lines) + '\n\n\n'
+            else:
+                self.content = f.read()
 
-    def render(self):
         processor = Processor(self.content)
         self._html, self.body, self._meta = processor.process()
 
@@ -193,8 +201,7 @@ class Page(object):
             f.write(u'\n')
             f.write(self.body.replace(u'\r\n', u'\n'))
         if update:
-            self.load()
-            self.render()
+            self._load()
 
     @property
     def meta(self):
@@ -307,16 +314,13 @@ class Wiki(object):
         os.remove(path)
         return True
 
-    def index(self):
+    def index(self, just_meta=True):
         """
-            Builds up a list of all the available pages.
+            yield an iterator over all the available pages.
 
-            :returns: a list of all the wiki pages
-            :rtype: list
         """
         # make sure we always have the absolute path for fixing the
         # walk path
-        pages = []
         root = os.path.abspath(self.root)
         for cur_dir, _, files in os.walk(root):
             # get the url of the current directory
@@ -325,9 +329,7 @@ class Wiki(object):
                 path = os.path.join(cur_dir, cur_file)
                 if cur_file.endswith('.md'):
                     url = clean_url(os.path.join(cur_dir_url, cur_file[:-3]))
-                    page = Page(path, url)
-                    pages.append(page)
-        return sorted(pages, key=lambda x: x.title.lower())
+                    yield Page(path, url, just_meta)
 
     def index_by(self, key):
         """
@@ -354,35 +356,34 @@ class Wiki(object):
         return pages.get(title)
 
     def get_tags(self):
-        pages = self.index()
+
         tags = {}
-        for page in pages:
+        for page in self.index(just_meta=True):
             pagetags = page.tags.split(',')
             for tag in pagetags:
                 tag = tag.strip()
-                if tag == '':
-                    continue
-                elif tags.get(tag):
-                    tags[tag].append(page)
-                else:
-                    tags[tag] = [page]
+                if tag:
+                    tags.setdefault(tag, [])
+                    item = {'title': page.title, 'url': page.url}
+                    tags[tag].append(item)
         return tags
 
     def index_by_tag(self, tag):
-        pages = self.index()
+
         tagged = []
-        for page in pages:
+        for page in self.index(just_meta=False):
             if tag in page.tags:
-                tagged.append(page)
-        return sorted(tagged, key=lambda x: x.title.lower())
+                yield {'title': page.title, 'url': page.url}
 
     def search(self, term, ignore_case=True, attrs=['title', 'tags', 'body']):
-        pages = self.index()
+
         regex = re.compile(term, re.IGNORECASE if ignore_case else 0)
         matched = []
-        for page in pages:
+        for page in self.index():
             for attr in attrs:
                 if regex.search(getattr(page, attr)):
                     matched.append(page)
                     break
+
+        matched = sorted(matched, key=lambda x: x.title.lower())
         return matched

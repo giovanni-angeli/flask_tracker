@@ -26,7 +26,17 @@ def home():
 @bp.route('/index/')
 @protect
 def index():
-    pages = current_wiki.index()
+    cntr = 0
+    limit = 100 
+    pages = []
+    for p in current_wiki.index():
+        pages.append(p)
+        cntr += 1
+        if cntr > limit:
+            break
+
+    pages.sort(key=lambda x: x.title.lower())
+
     return render_template('index.html', pages=pages)
 
 
@@ -119,7 +129,9 @@ def tags():
 @bp.route('/tag/<string:name>/')
 @protect
 def tag(name):
-    tagged = current_wiki.index_by_tag(name)
+
+    tagged = [p for p in current_wiki.index_by_tag(name)]
+    tagged = sorted(tagged, key=lambda x: x.get('title', '').lower())
     return render_template('tag.html', pages=tagged, tag=name)
 
 

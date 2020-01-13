@@ -8,14 +8,17 @@
 
 import os
 import uuid
+import json
 import logging
 import traceback
 from datetime import datetime
 
-from werkzeug.security import generate_password_hash  # pylint: disable=import-error
-import flask_sqlalchemy              # pylint: disable=import-error
+import iso8601                       # pylint: disable=import-error
 
 from flask import Markup  # pylint: disable=import-error
+from werkzeug.security import generate_password_hash  # pylint: disable=import-error
+from sqlalchemy.inspection import inspect  # pylint: disable=import-error
+import flask_sqlalchemy              # pylint: disable=import-error
 
 sqlalchemy_db_ = flask_sqlalchemy.SQLAlchemy()
 sqlalchemy_session_ = None
@@ -107,6 +110,25 @@ def insert_users_in_db(app, db):
                 logging.info(exc)
 
 
+def fix_missing_number_in_tasks(app, db):
+
+    with app.app_context():
+
+        t = db.session.query(Task).order_by(Task.number.desc()).first()
+        N = t.number + 1 if t.number is not None else 1
+
+        for t in db.session.query(Task).filter(not Task.number):
+
+            try:
+                if not t.number:
+                    t.number = N
+                    N += 1
+                db.session.commit()
+            except Exception as exc:
+                db.session.rollback()
+                logging.warning(exc)
+
+
 def populate_sample_db(app, db, N):   # pylint: disable=too-many-locals
 
     fixtes = [
@@ -178,11 +200,10 @@ def populate_sample_db(app, db, N):   # pylint: disable=too-many-locals
 
 def reset_db(app, db):
 
-    logging.warning("resetting db")
+    logging.warning("resetting db (dropping all tables)")
 
     with app.app_context():
         db.drop_all()
-        db.create_all()
         db.session.commit()
 
 
@@ -224,9 +245,44 @@ class BaseModel(object):                         # pylint: disable=too-few-publi
         return exceeding_objects
 
     def get_id_short(self):
-        return self.id[:8]
+        return self.id[:4].upper()
 
     id_short = property(get_id_short)
+
+    def object_to_json(self, indent=2):
+        data = self.object_to_dict()
+        return json.dumps(data, indent=indent)
+
+    def object_to_dict(self):
+
+        data = {c.key: getattr(self, c.key)
+                for c in inspect(self).mapper.column_attrs}
+        # ~ for c in inspect(self).mapper.column_attrs if getattr(self, c.key) is not None}
+
+        for k in data.keys():
+            if isinstance(data[k], datetime):
+                data[k] = data[k].isoformat()
+
+        return data
+
+    @classmethod
+    def object_from_json(cls, json_data):
+
+        data = json.loads(json_data)
+        obj = cls.object_from_dict(data)
+        return obj
+
+    @classmethod
+    def object_from_dict(cls, data_dict):
+
+        data_dict_cpy = {k: v for k, v in data_dict.items() if v is not None}
+        for k in data_dict_cpy:
+            if 'date' in k and isinstance(data_dict_cpy[k], str):
+                data_dict_cpy[k] = iso8601.parse_date(data_dict_cpy[k])
+
+        obj = cls(**data_dict_cpy)
+
+        return obj
 
 
 class NamedModel(BaseModel):
@@ -239,7 +295,8 @@ class NamedModel(BaseModel):
         return self.name
 
     def __repr__(self):
-        return "<{}>{}: {}".format(type(self).__name__[:1], self.id_short, self.__str__())
+        # ~ return "<{}>{}: {}".format(type(self).__name__[:1], self.id_short, self.__str__())
+        return self.__str__()
 
 
 class Project(NamedModel, sqlalchemy_Model):  # pylint: disable=too-few-public-methods
@@ -310,6 +367,8 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     assigned_tasks = db.relationship('Task', backref='assignee')
     cost_per_hour = db.Column(db.Float, default=0.00, doc='cost per hour in arbitrary unit')
 
+    modifications = db.relationship('History', backref='user')
+
     @property
     def login(self):
         return self.name.lower()
@@ -333,8 +392,14 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
 class Attachment(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
-
     attached_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
+
+
+class History(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
+
+    db = MODELS_GLOBAL_CONTEXT['db']
+    task_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
+    user_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
 
 
 class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
@@ -342,6 +407,10 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     db = MODELS_GLOBAL_CONTEXT['db']
 
     id = db.Column(db.Unicode, primary_key=True, nullable=False, default=generate_id)
+
+    # ~ number = db.Column(db.Integer, autoincrement=True)
+    name = db.Column(db.Unicode(64), nullable=False)
+    # ~ sqlalchemy_db_.UniqueConstraint('name', 'number')
 
     content = db.Column(db.Unicode(1024), default=get_default_task_content)
 
@@ -354,6 +423,7 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
 
     worktimes = db.relationship('WorkTime', backref='task')
     attachments = db.relationship('Attachment', backref='attached')
+    modifications = db.relationship('History', backref='task')
 
     followers = db.relationship('User', secondary=followings, backref='followed')
 
@@ -363,6 +433,11 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
 
     parent_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
     parent = db.relationship("Task", remote_side=[id])
+
+    # ~ def __str__(self):
+    # ~ _ = '<a href="/task/details/?id={}">{}</a> {}'.format(self.id, self.id_short or 0, self.name)
+    # ~ _ = '[{}] {}'.format(self.id_short or 0, self.name)
+    # ~ return _
 
     @property
     def formatted_attach_names(self):
@@ -442,6 +517,11 @@ def init_orm(app):
     db.init_app(app)
 
     setup_orm(app)
+
+    with app.app_context():
+        # ~ History.__table__.drop(db.engine)
+        db.create_all()
+        db.session.commit()
 
     install_listeners()
 
