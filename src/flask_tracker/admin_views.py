@@ -209,9 +209,10 @@ def define_view_classes(current_app):
             'tasks',
         )
 
-        column_formatters = {
+        column_formatters = TrackerModelView.column_formatters.copy()
+        column_formatters.update({
             'tasks': _display_tasks_as_links,
-        }
+        })
 
     class MilestoneView(TrackerModelView):   # pylint: disable=unused-variable
 
@@ -238,9 +239,10 @@ def define_view_classes(current_app):
             'tasks',
         )
 
-        column_formatters = {
+        column_formatters = TrackerModelView.column_formatters.copy()
+        column_formatters.update({
             'tasks': _display_tasks_as_links,
-        }
+        })
 
         def get_edit_form(self):
 
@@ -321,7 +323,6 @@ def define_view_classes(current_app):
             return Markup("%.2f" % total)
 
         column_formatters = TrackerModelView.column_formatters.copy()
-
         column_formatters.update({
             'worktimes': display_worked_hours,
             'assigned_tasks': _display_tasks_as_links,
@@ -485,7 +486,6 @@ def define_view_classes(current_app):
             return ret
 
         column_formatters = TrackerModelView.column_formatters.copy()
-
         column_formatters.update({
             'id_short': display_id_short,
             'milestone': display_milestone,
@@ -608,10 +608,11 @@ def define_view_classes(current_app):
                 logging.warning(traceback.format_exc())
             return ret
 
-        column_formatters = {
+        column_formatters = TrackerModelView.column_formatters.copy()
+        column_formatters.update({
             'task': display_task,
             'description': display_modifications,
-        }
+        })
 
     class AttachmentView(TrackerModelView):     # pylint: disable=unused-variable
 
