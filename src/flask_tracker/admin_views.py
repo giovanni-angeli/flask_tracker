@@ -20,7 +20,7 @@ from datetime import datetime, timezone, timedelta
 import markdown  # pylint: disable=import-error
 from werkzeug import secure_filename  # pylint: disable=import-error, no-name-in-module
 from jinja2 import contextfunction   # pylint: disable=import-error
-from flask import (Markup)  # pylint: disable=import-error
+from flask import Markup  # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
 import flask_login  # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
@@ -83,8 +83,8 @@ def _display_tasks_as_links(cls, context, obj, name):   # pylint: disable=unused
 
 def define_view_classes(current_app):
     """
-    we define the ModelView classes inside a function, because
-    we want an already initialized app to access the app.config.
+    we define our ModelView classes inside a function, because
+    we want an already initialized app to allow access to app.config.
     """
 
     class TrackerModelView(ModelView):    # pylint: disable=unused-variable
@@ -110,8 +110,9 @@ def define_view_classes(current_app):
 
         def display_time_to_local_tz(self, context, obj, name):   # pylint: disable=unused-argument,no-self-use
             value = getattr(obj, name)
-            value = value.replace(tzinfo=timezone.utc).astimezone().strftime("%d %b %Y (%I:%M:%S %p)")
-            return Markup(value)
+            value_ = value.replace(tzinfo=timezone.utc).astimezone().strftime("%d %b %Y (%I:%M:%S %p)")
+            # ~ logging.warning("obj:{}, name:{}, value:{}, value_:{}".format(obj, name, value, value_))
+            return Markup(value_)
 
         column_formatters = {
             'date_created': display_time_to_local_tz,
@@ -160,18 +161,11 @@ def define_view_classes(current_app):
             'task',
         )
 
-        column_labels = dict(date_created='Date')
-
-        form_excluded_columns = (
-            # ~ 'date_created',
+        column_details_exclude_list = (
             'date_modified',
         )
 
-        form_args = {
-            'date_created': {
-                'label': 'date',
-            },
-        }
+        column_labels = dict(date_created='Date')
 
         column_filters = (
             'date_created',
@@ -181,15 +175,33 @@ def define_view_classes(current_app):
             'task',
         )
 
-        def get_edit_form(self):
+        def get_create_form(self):
 
-            form_ = super().get_edit_form()
-            form_.description = fields.TextAreaField('* description *', [validators.optional(), validators.length(max=200)],
-                                                     render_kw={'rows': '4'})
+            form_ = super().get_create_form()
+
+            def _local_now():
+                date_utc_ = datetime.utcnow()
+                date_local_ = date_utc_ - timedelta(seconds=time.timezone)
+                logging.warning("date_local_:{}, date_utc_:{}".format(date_local_, date_utc_))
+                return date_local_
+
+            form_.date_created = fields.DateTimeField('date',
+                                                      [validators.optional(),
+                                                       validators.DataRequired()],
+                                                      description='date of the activity',
+                                                      default=_local_now())
+            logging.warning("dir(form_.date_created):{}".format(dir(form_.date_created)))
+            logging.warning("form_.date_created:{}".format(form_.date_created))
 
             return form_
 
         def on_model_change(self, form_, obj, is_created):
+
+            if hasattr(form_, 'date_created') and form_.date_created:
+                date_local_ = form_.date_created.data
+                date_utc_ = date_local_ + timedelta(seconds=time.timezone)
+                logging.warning("date_local_:{}, date_utc_:{}".format(date_local_, date_utc_))
+                obj.date_created = date_utc_
 
             ret = super(WorkTimeView, self).on_model_change(form, obj, is_created)
             return ret
@@ -198,14 +210,16 @@ def define_view_classes(current_app):
 
         column_editable_list = (
             'customer',
-            # ~ 'project',
         )
+
+        column_labels = dict(name='Code')
 
         column_list = (
             'customer',
+            'name',
+            'description',
             'amount',
             'date_created',
-            'description',
             'tasks',
         )
 
@@ -619,6 +633,9 @@ def define_view_classes(current_app):
         form_args = {
             'attached': {
                 'label': 'attached task',
+            },
+            'description': {
+                'label': 'title:TAGS',
             },
         }
 

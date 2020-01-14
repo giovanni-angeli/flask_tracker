@@ -49,6 +49,7 @@ def get_start_of_week():
     start_of_the_week = Markup(start_of_the_week)
     return start_of_the_week
 
+
 def get_start_of_month():
 
     today = datetime.now().date()
@@ -122,7 +123,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
     @protect
     def index(self, ):
 
-        t0 = time.time()
+        # ~ t0 = time.time()
 
         session = MODELS_GLOBAL_CONTEXT['session']
 
@@ -177,7 +178,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             'worktime_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(worktime_filtered_views)],
         }
 
-        logging.warning("dt:{}".format(time.time() - t0))
+        # ~ logging.warning("dt:{}".format(time.time() - t0))
 
         return self.render(self._template, **ctx)
 
@@ -218,13 +219,19 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
 
         selected_task_name = request.args.get('selected_task').split('::')[0]
         hours_to_add = request.args.get('hours_to_add')
+        date_ = request.args.get('date')
         current_user = session.query(User).filter(User.id == flask_login.current_user.id).first()
         selected_task = session.query(Task).filter(Task.name == selected_task_name).first()
 
+        toks = [int(i) for i in date_.split('-')] + [9, 0]
+        date_local_ = datetime(*toks)
+        date_utc_ = date_local_ + timedelta(seconds=time.timezone)
+        logging.warning("date_:{}, date_local_:{}, date_utc_:{}".format(date_, date_local_, date_utc_))
         data = {
             'duration': float(hours_to_add),
             'user': current_user,
             'task': selected_task,
+            'date_created': date_utc_,
         }
 
         wt = WorkTime(**data)
@@ -304,8 +311,6 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             mimetype='text')
 
         return ret
-
-
 
 
 def init_admin(app, db):

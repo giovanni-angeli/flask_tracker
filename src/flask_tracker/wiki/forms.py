@@ -1,9 +1,8 @@
 # coding: utf-8
 
-# ~ from Flask import FlaskForm
 from flask_wtf import FlaskForm
 
-from wtforms import (BooleanField, TextField, TextAreaField, PasswordField)
+from wtforms import (BooleanField, TextField, TextAreaField)
 from wtforms.validators import (InputRequired, ValidationError)
 
 from flask_tracker.wiki.core import clean_url
@@ -33,5 +32,3 @@ class EditorForm(FlaskForm):
     title = TextField('', [InputRequired()])
     body = TextAreaField('', [InputRequired()])
     tags = TextField('')
-
-
