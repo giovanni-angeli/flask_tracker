@@ -15,7 +15,7 @@ with (HERE / "README.md").open('rt') as f:
     README = f.read()
 
 
-VERSION = '0.6.0rc3'
+VERSION = '0.6.0rc4'
 
 INSTALL_REQUIRES = [
     'jsonschema',  
