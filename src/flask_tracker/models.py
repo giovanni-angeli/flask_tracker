@@ -408,11 +408,9 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
 
     id = db.Column(db.Unicode, primary_key=True, nullable=False, default=generate_id)
 
-    # ~ number = db.Column(db.Integer, autoincrement=True)
     name = db.Column(db.Unicode(64), nullable=False)
-    # ~ sqlalchemy_db_.UniqueConstraint('name', 'number')
 
-    content = db.Column(db.Unicode(1024), default=get_default_task_content)
+    content = db.Column(db.Unicode(5 * 1024), default=get_default_task_content)
 
     department = db.Column(db.Unicode(16))
     created_by = db.Column(db.Unicode(64))
@@ -434,14 +432,10 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     parent_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
     parent = db.relationship("Task", remote_side=[id])
 
-    # ~ def __str__(self):
-    # ~ _ = '<a href="/task/details/?id={}">{}</a> {}'.format(self.id, self.id_short or 0, self.name)
-    # ~ _ = '[{}] {}'.format(self.id_short or 0, self.name)
-    # ~ return _
-
     @property
     def formatted_attach_names(self):
-        return [Markup(a.name) for a in self.attachments]
+        ret = [Markup(a.name) for a in self.attachments]
+        return ret
 
     @formatted_attach_names.setter
     def formatted_attach_names(self, val):

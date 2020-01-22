@@ -387,6 +387,7 @@ def define_view_classes(current_app):
             'date_created',
             'followers',
             'worktimes',
+            # ~ 'attachments',
         )
 
         column_details_list = (
@@ -406,6 +407,7 @@ def define_view_classes(current_app):
             'worktimes',
             'date_created',
             'date_modified',
+            # ~ 'attachments',
         )
 
         column_editable_list = (
@@ -451,18 +453,8 @@ def define_view_classes(current_app):
         column_labels = dict(worktimes='Total Worked Hours', id_short="#")
 
         def display_worktimes(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
-            """
-            /worktime/?flt2_task_name_equals==import%20machine-data%20-%20alfa40
-            /worktime/?flt2_task_task_name_equals=UI+page+per+raccolta+dati+volume%2Fpeso
-            /worktime/?flt1_task_task_name_contains=UI+page+per+raccolta+dati+volume%2Fpeso
-
-            worktime/?flt2_task_task_name_equals=import%20machine-data%20-%20alfa40
-            worktime/?flt2_task_task_name_equals=import+machine-data+-+alfa40
-            """
-
             total = sum([h.duration for h in obj.worktimes])
             ret = total
-
             try:
                 html_ = '<a href="/worktime/?flt2_task_task_name_equals={}" title="show worked hrs details.">{}</a>'.format(
                     urllib.parse.quote_plus(obj.name), total)
@@ -472,15 +464,10 @@ def define_view_classes(current_app):
             return ret
 
         def display_id_short(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
-            """
-            /history/?flt0_task_task_name_equals=Omologazione+prodotti+%2B+tagli+per+riproduzione+basi+intermedie
-
-
-            """
             value = getattr(obj, name)
             ret = value
             try:
-                html_ = '<a href="/history/?flt0_task_task_name_equals={}" title="show history">{}</a>'.format(
+                html_ = '<a href="/history/?flt0_task_task_name_equals={}" title="view history">{}</a>'.format(
                     urllib.parse.quote_plus(obj.name), value)
                 ret = Markup(html_)
             except BaseException:
@@ -488,7 +475,6 @@ def define_view_classes(current_app):
             return ret
 
         def display_milestone(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
-
             value = getattr(obj, name)
             ret = value
             try:
@@ -510,13 +496,14 @@ def define_view_classes(current_app):
 
             form_ = super().get_edit_form()
 
-            form_.formatted_attach_names = fields.TextAreaField(
-                'attachment urls', render_kw=dict(value="*", disabled=True))
+            # ~ NOTE: The value of this filed will be updated in javascript on the edit page (i.e. at 'edit' time)
+            form_.formatted_attach_names = fields.StringField(
+                'attachments', render_kw=dict(value="*", readonly=True, height="1px"))
 
             cnt_description = Markup(
                 'NOTE: you can use <a target="blank_" href="https://daringfireball.net/projects/markdown/syntax">Markdown syntax</a>. Use preview button to see what you get.')
 
-            form_.content = fields.TextAreaField('content', [validators.optional(), validators.length(max=1000)],
+            form_.content = fields.TextAreaField('content', [validators.optional(), validators.length(max=5 * 1000)],
                                                  description=cnt_description,
                                                  render_kw={"style": "background:#fff; border:dashed #DD3333 1px; height:480px;"})
 
@@ -568,7 +555,7 @@ def define_view_classes(current_app):
 
         can_create = False
         can_delete = False
-        can_edit = False
+        # ~ can_edit = False
 
         column_labels = dict(user='Author', description="modifications", date_created="Date")
 
@@ -645,6 +632,21 @@ def define_view_classes(current_app):
             'description',
             'attached.name'
         )
+
+        def display_name(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
+            value = getattr(obj, name)
+            ret = value
+            try:
+                html_ = '<a href="/attachment/{name}">{name}</a>'.format(name=obj.name)
+                ret = Markup(html_)
+            except BaseException:
+                logging.warning(traceback.format_exc())
+            return ret
+
+        column_formatters = TrackerModelView.column_formatters.copy()
+        column_formatters.update({
+            'name': display_name,
+        })
 
         def get_create_form(self):
 

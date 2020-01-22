@@ -62,12 +62,15 @@
         document.getElementById("preview_content_button").onclick = preview_button_clicked;
 
         var e_a = document.getElementById("formatted_attach_names");
+        var div_ = document.createElement("div");
+        div_.innerHTML = "";
         if (e_a) {
-            e_a.innerHTML = "";
+            e_a.value = "";
             {% for name in model.formatted_attach_names %}
-                e_a.value += "[{{ name }}]({{url_for('attachment', filename=name)}})\n";
+                div_.innerHTML += '<a class="form-control" href="' + "{{url_for('attachment', filename=name)}}" + '"> [{{ name }}]({{url_for('attachment', filename=name)}}) </a> ';
             {% endfor %}
         }
+        e_a.parentNode.appendChild(div_);
         g_original_content_style = document.getElementById('content').style.cssText;
         e = document.createElement('div')
         e.id = 'content_preview';
