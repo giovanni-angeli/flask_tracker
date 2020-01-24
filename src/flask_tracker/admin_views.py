@@ -104,7 +104,7 @@ def define_view_classes(current_app):
         column_default_sort = ('date_created', True)
 
         column_searchable_list = (
-            # ~ 'name',
+            # 'name',
             'description',
         )
 
@@ -151,6 +151,7 @@ def define_view_classes(current_app):
 
         # ~ create_modal = True
         # ~ edit_modal = True
+
         can_edit = False
 
         column_list = (
@@ -174,6 +175,22 @@ def define_view_classes(current_app):
             'task.name',
             'task',
         )
+
+        def display_task(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
+            value = getattr(obj, name)
+            ret = value
+            try:
+                html_ = '<a href="/task/details/?id={}" title="view task">{}</a>'.format(
+                    obj.task_id, value)
+                ret = Markup(html_)
+            except BaseException:
+                logging.warning(traceback.format_exc())
+            return ret
+
+        column_formatters = TrackerModelView.column_formatters.copy()
+        column_formatters.update({
+            'task': display_task,
+        })
 
         def get_create_form(self):
 
@@ -381,11 +398,11 @@ def define_view_classes(current_app):
             'status',
             'category',
             'department',
-            'order',
+           # 'order',
             'priority',
-            'parent',
+           # 'parent',
             'date_created',
-            'followers',
+           # 'followers',
             'worktimes',
             # ~ 'attachments',
         )
@@ -426,6 +443,7 @@ def define_view_classes(current_app):
             'department',
             'category',
             'assignee.name',
+            'followers.name',
             # ~ 'project.name',
             'milestone.name',
             'milestone.project',
@@ -456,7 +474,7 @@ def define_view_classes(current_app):
             total = sum([h.duration for h in obj.worktimes])
             ret = total
             try:
-                html_ = '<a href="/worktime/?flt2_task_task_name_equals={}" title="show worked hrs details.">{}</a>'.format(
+                html_ = '<a href="/worktime/?flt2_task_task_name_equals={}" title="view worked hrs details.">{}</a>'.format(
                     urllib.parse.quote_plus(obj.name), total)
                 ret = Markup(html_)
             except BaseException:
@@ -478,7 +496,7 @@ def define_view_classes(current_app):
             value = getattr(obj, name)
             ret = value
             try:
-                html_ = '<a href="/milestone/details/?id={}" title="show milestone">{}</a>'.format(
+                html_ = '<a href="/milestone/details/?id={}" title="view milestone">{}</a>'.format(
                     obj.milestone_id, value)
                 ret = Markup(html_)
             except BaseException:

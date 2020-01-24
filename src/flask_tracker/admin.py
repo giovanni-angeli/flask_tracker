@@ -144,7 +144,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             ('all open tasks', compile_filtered_url('task', [('status', 'equals', 'open')])),
             ('all tasks in progress', compile_filtered_url('task', [('status', 'equals', 'in_progress')])),
             ('all tasks followed by <b>{}</b>'.format(user_name),
-             compile_filtered_url('task', [('user_name', 'equals', user_name)])),
+             compile_filtered_url('task', [('followers_user_name', 'contains', user_name)])),
             ('tasks assigned to <b>{}</b> open or in progress'.format(user_name),
              compile_filtered_url('task', [('assignee_user_name', 'equals', user_name), ('status', 'in_list', ('open', 'in_progress'))])),
             ('all tasks assigned to <b>{}</b>'.format(user_name),
@@ -311,6 +311,12 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             mimetype='text')
 
         return ret
+
+    @flask_admin.expose('/task_search/<string:key>/', methods=('GET', ))
+    @protect
+    def task_search(self, key):          # pylint: disable=no-self-use
+        url_ = "/task/?search={}".format(key)
+        return redirect(url_)
 
 
 def init_admin(app, db):
