@@ -255,6 +255,11 @@ def define_view_classes(current_app):
             'due_date',
         )
 
+        column_searchable_list = (
+            'name',
+            'description',
+        )
+
         column_filters = (
             'start_date',
             'due_date',
@@ -398,11 +403,11 @@ def define_view_classes(current_app):
             'status',
             'category',
             'department',
-           # 'order',
+            # 'order',
             'priority',
-           # 'parent',
+            # 'parent',
             'date_created',
-           # 'followers',
+            # 'followers',
             'worktimes',
             # ~ 'attachments',
         )
@@ -649,6 +654,11 @@ def define_view_classes(current_app):
             'date_modified',
             'description',
             'attached.name'
+        )
+
+        column_searchable_list = (
+            'name',
+            'description',
         )
 
         def display_name(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
