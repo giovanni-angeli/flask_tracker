@@ -11,6 +11,7 @@ wsgi.log
 *.o
 *.log*
 *.diff
+*.patch
 venv
 __tmp__*
 docs/*.html
