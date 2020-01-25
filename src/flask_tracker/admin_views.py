@@ -34,27 +34,37 @@ def _handle_task_modification(form_, tsk_as_dict):     # pylint: disable=no-self
     modifications = []
     deflt_ = form_.data.get('list_form_pk') is not None
     for k in form_.data.keys():
-        if k == 'list_form_pk':
-            continue
-        if k == 'preview_content_button':
-            continue
-        a = form_.data[k]
-        b = form_[k].object_data
+        try:
+            if k == 'list_form_pk':
+                continue
+            if k == 'preview_content_button':
+                continue
+            if k == 'formatted_attach_names':
+                continue
 
-        if isinstance(a, list) and isinstance(a, list):
-            a.sort(key=lambda x: x.name)
-            b.sort(key=lambda x: x.name)
+            a = form_.data[k]
+            b = form_[k].object_data
 
-        if a != b:
-            if k == 'content':
-                b = difflib.unified_diff(a.split('\n'), b.split('\n'), n=2,
-                                         fromfile='before', tofile='after', fromfiledate=time.asctime())
-                b = Markup("<br/>".join(b))
-            elif deflt_:
-                b = " --> {}".format(a)
-            else:
-                b = "{} --> {}".format(b, a)
-            modifications.append((k, str(b)))
+            if not a and not b:
+                continue
+
+            if isinstance(a, list) and isinstance(b, list):
+                a.sort(key=lambda x: x.name)
+                b.sort(key=lambda x: x.name)
+
+            if a != b:
+                if k == 'content':
+                    b = difflib.unified_diff(b.split('\n'), a.split('\n'), n=2,
+                                             fromfile='before', tofile='after', fromfiledate=time.asctime())
+                    b = Markup("<br/>".join(b))
+                elif deflt_:
+                    b = " --> {}".format(a)
+                else:
+                    b = "{} --> {}".format(a, b)
+                modifications.append((k, str(b)))
+
+        except Exception as exc:
+            modifications.append((k, str(exc)))
 
     if modifications:
 
@@ -578,7 +588,7 @@ def define_view_classes(current_app):
 
         can_create = False
         can_delete = False
-        # ~ can_edit = False
+        can_edit = False
 
         column_labels = dict(user='Author', description="modifications", date_created="Date")
 
@@ -625,6 +635,7 @@ def define_view_classes(current_app):
                 LINE_FMTR += '<tr><td class="col-md-1">{}</td><td class="col-md-8">{}</td></tr>'
                 html_ = ""
                 html_ += '<table class="table table-striped table-bordered">'
+                html_ += '<tr><td colspan="2" class="col-md-9"></td></tr>'
                 html_ += "".join([LINE_FMTR.format(k, v) for (k, v) in value])
                 html_ += "</table>"
                 ret = Markup(html_)
