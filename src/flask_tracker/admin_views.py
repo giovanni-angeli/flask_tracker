@@ -216,9 +216,9 @@ def define_view_classes(current_app):
                                                       [validators.optional(),
                                                        validators.DataRequired()],
                                                       description='date of the activity',
-                                                      default=_local_now())
-            logging.warning("dir(form_.date_created):{}".format(dir(form_.date_created)))
-            logging.warning("form_.date_created:{}".format(form_.date_created))
+                                                      default=_local_now)
+            # ~ logging.warning("dir(form_.date_created):{}".format(dir(form_.date_created)))
+            # ~ logging.warning("form_.date_created:{}".format(form_.date_created))
 
             return form_
 
