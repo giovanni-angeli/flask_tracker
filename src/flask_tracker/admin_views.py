@@ -28,6 +28,9 @@ from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-
 
 from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT)
 
+def get_current_user_name():
+    logging.warning("flask_login.current_user.name:{}".format(flask_login.current_user.name))
+    return flask_login.current_user.name
 
 def _handle_task_modification(form_, tsk_as_dict):     # pylint: disable=no-self-use
 
@@ -163,6 +166,12 @@ def define_view_classes(current_app):
         # ~ edit_modal = True
 
         can_edit = False
+    
+        column_sortable_list = (
+            'date_created',
+            ('user', ('user.name', )),
+            ('task', ('task.name', )))
+
 
         column_list = (
             'date_created',
@@ -185,6 +194,12 @@ def define_view_classes(current_app):
             'task.name',
             'task',
         )
+
+        form_args = {
+            'user': {
+                'default': get_current_user_name,
+            },
+        }
 
         def display_task(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
             value = getattr(obj, name)
@@ -383,6 +398,20 @@ def define_view_classes(current_app):
 
         # ~ can_delete = False
         # ~ column_details_list = ()
+
+        column_sortable_list = (
+            'name', 
+            'status', 
+            'category', 
+            'department', 
+            'date_created', 
+            'priority',
+            'assignee',
+            ('milestone', 
+                (
+                    'milestone.project.name', 
+                    'milestone.name', 
+                    'milestone.due_date')))
 
         column_searchable_list = (
             'id',
