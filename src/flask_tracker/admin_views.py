@@ -20,9 +20,10 @@ from datetime import datetime, timezone, timedelta
 import markdown  # pylint: disable=import-error
 from werkzeug import secure_filename  # pylint: disable=import-error, no-name-in-module
 from jinja2 import contextfunction   # pylint: disable=import-error
-from flask import Markup  # pylint: disable=import-error
+from flask import Markup, flash  # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
 import flask_login  # pylint: disable=import-error
+import flask_admin  # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
 from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-error
 
@@ -165,8 +166,16 @@ def define_view_classes(current_app):
         # ~ create_modal = True
         # ~ edit_modal = True
 
-        can_edit = False
-    
+        # ~ can_edit = False
+
+        column_editable_list = (
+            'duration',
+            # ~ 'user',
+            # ~ 'task',
+            'date_created',
+            'description',
+        )
+
         column_sortable_list = (
             'date_created',
             ('user', ('user.name', )),
@@ -514,6 +523,10 @@ def define_view_classes(current_app):
 
         column_labels = dict(worktimes='Total Worked Hours', id_short="#")
 
+        custom_row_actions = [
+            ("/add_a_working_time_slot", '', 'fa fa-time glyphicon glyphicon-time', '_self', 'confirm adding hours?', 'Add Worked Hours'),
+        ]
+
         def display_worktimes(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
             total = sum([h.duration for h in obj.worktimes])
             ret = total
@@ -612,6 +625,7 @@ def define_view_classes(current_app):
             ret = super(TaskView, self).on_model_change(form, obj, is_created)
 
             return ret
+
 
     class HistoryView(TrackerModelView):     # pylint: disable=unused-variable
 

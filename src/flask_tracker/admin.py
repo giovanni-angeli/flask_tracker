@@ -172,6 +172,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             'users': user_names,
             'categories': category_names,
             'departments': department_names,
+            'time': time.asctime(),
             'version': get_package_version(),
             'assigned_task_names': assigned_task_names,
             'task_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(task_filtered_views)],
@@ -217,11 +218,18 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
 
         session = MODELS_GLOBAL_CONTEXT['session']
 
-        selected_task_name = request.args.get('selected_task').split('::')[0]
-        hours_to_add = request.args.get('hours_to_add')
-        date_ = request.args.get('date')
+        if request.args.get('id') is not None:
+            id_ = request.args['id']
+            selected_task = session.query(Task).filter(Task.id == id_).first()
+            hours_to_add = 0
+            date_ = datetime.now().date().isoformat()
+        else:
+            selected_task_name = request.args.get('selected_task').split('::')[0]
+            selected_task = session.query(Task).filter(Task.name == selected_task_name).first()
+            hours_to_add = request.args.get('hours_to_add')
+            date_ = request.args.get('date')
+
         current_user = session.query(User).filter(User.id == flask_login.current_user.id).first()
-        selected_task = session.query(Task).filter(Task.name == selected_task_name).first()
 
         toks = [int(i) for i in date_.split('-')] + [9, 0]
         date_local_ = datetime(*toks)
@@ -238,9 +246,8 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         session.add(wt)
         session.commit()
 
-        url_ = compile_filtered_url('worktime',
-                                    [('date', 'greater_than', get_start_of_week()), ('user_user_name', 'equals', current_user.name)])
-
+        url_ = "/worktime/edit/?id={}".format(wt.id)
+        url_ = quote(url_, safe='/?&=+')
         return redirect(url_)
 
     @flask_admin.expose('/report', methods=('GET', 'POST'))

@@ -20,5 +20,20 @@
 {% endblock %}
 
 
-{{ super() }}
+{% block list_row_actions %}
+  {{ super() }}
+    
+    {% for url, text, span_class, target, confirm_msg, title in admin_view.custom_row_actions|list %}
+        <a href="{{url}}?id={{ get_pk_value(row) }}" 
+            class="icon {{span_class}}"
+            target="{{target}}" title="{{ title }}"
+            onclick="return confirm('{{ confirm_msg }}');">
+            {{ text }}
+            <span ></span>
+        </a>
+
+    {% endfor %}
+
+{% endblock %}
+
 
