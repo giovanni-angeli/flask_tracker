@@ -20,18 +20,19 @@ from datetime import datetime, timezone, timedelta
 import markdown  # pylint: disable=import-error
 from werkzeug import secure_filename  # pylint: disable=import-error, no-name-in-module
 from jinja2 import contextfunction   # pylint: disable=import-error
-from flask import Markup, flash  # pylint: disable=import-error
+from flask import Markup  # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
 import flask_login  # pylint: disable=import-error
-import flask_admin  # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
 from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-error
 
 from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT)
 
+
 def get_current_user_name():
     logging.warning("flask_login.current_user.name:{}".format(flask_login.current_user.name))
     return flask_login.current_user.name
+
 
 def _handle_task_modification(form_, tsk_as_dict):     # pylint: disable=no-self-use
 
@@ -163,10 +164,8 @@ def define_view_classes(current_app):
 
     class WorkTimeView(TrackerModelView):  # pylint: disable=unused-variable
 
-        # ~ create_modal = True
-        # ~ edit_modal = True
-
-        # ~ can_edit = False
+        can_delete = current_app.config.get('CAN_DELETE_WORKTIME', True)
+        can_edit = current_app.config.get('CAN_EDIT_WORKTIME', True)
 
         column_editable_list = (
             'duration',
@@ -180,7 +179,6 @@ def define_view_classes(current_app):
             'date_created',
             ('user', ('user.name', )),
             ('task', ('task.name', )))
-
 
         column_list = (
             'date_created',
@@ -403,24 +401,20 @@ def define_view_classes(current_app):
 
     class TaskView(TrackerModelView):     # pylint: disable=unused-variable
 
-        # ~ edit_template = 'admin/edit_task.html'
-
-        # ~ can_delete = False
-        # ~ column_details_list = ()
+        can_delete = current_app.config.get('CAN_DELETE_TASK', True)
 
         column_sortable_list = (
-            'name', 
-            'status', 
-            'category', 
-            'department', 
-            'date_created', 
+            'name',
+            'status',
+            'category',
+            'department',
+            'date_created',
             'priority',
             'assignee',
-            ('milestone', 
-                (
-                    'milestone.project.name', 
-                    'milestone.name', 
-                    'milestone.due_date')))
+            ('milestone',
+             ('milestone.project.name',
+              'milestone.name',
+              'milestone.due_date')))
 
         column_searchable_list = (
             'id',
@@ -524,7 +518,8 @@ def define_view_classes(current_app):
         column_labels = dict(worktimes='Total Worked Hours', id_short="#")
 
         custom_row_actions = [
-            ("/add_a_working_time_slot", '', 'fa fa-time glyphicon glyphicon-time', '_self', 'confirm adding hours?', 'Add Worked Hours'),
+            ("/add_a_working_time_slot", '', 'fa fa-time glyphicon glyphicon-time',
+             '_self', 'confirm adding hours?', 'Add Worked Hours'),
         ]
 
         def display_worktimes(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
@@ -625,7 +620,6 @@ def define_view_classes(current_app):
             ret = super(TaskView, self).on_model_change(form, obj, is_created)
 
             return ret
-
 
     class HistoryView(TrackerModelView):     # pylint: disable=unused-variable
 

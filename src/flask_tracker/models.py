@@ -385,6 +385,10 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     def is_anonymous(self):
         return not self.is_authenticated
 
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
+
     def get_id(self):
         return self.id
 

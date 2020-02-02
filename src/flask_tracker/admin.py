@@ -18,9 +18,12 @@ from functools import wraps
 
 import markdown  # pylint: disable=import-error
 from werkzeug.security import check_password_hash  # pylint: disable=import-error
-from flask import (Markup, url_for, redirect, request, current_app,
+from flask import (Markup, flash, url_for, redirect, request, current_app,
                    send_from_directory)  # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
+
+from isoweek import Week
+
 import flask_login  # pylint: disable=import-error
 import flask_admin  # pylint: disable=import-error
 from flask_admin.base import Admin, MenuLink    # pylint: disable=import-error
@@ -152,8 +155,6 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         ]
 
         worktime_filtered_views = [
-            ('hours worked by <b>{}</b>, in this week'.format(user_name),
-             compile_filtered_url('worktime', [('date', 'greater_than', start_of_the_week), ('user_user_name', 'equals', user_name)])),
             ('hours worked by <b>{}</b>, in this month'.format(user_name),
              compile_filtered_url('worktime', [('date', 'greater_than', start_of_the_month), ('user_user_name', 'equals', user_name)])),
         ]
@@ -165,6 +166,9 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         category_names = sorted([n[0] for n in TASK_CATEGORIES])
         department_names = sorted([n[0] for n in DEPARTMENTS])
 
+        t_ = datetime.now().date().isocalendar()
+        week = "{:4d}-W{:02d}".format(t_[0], t_[1])
+
         ctx = {
             'projects': project_names,
             'orders': order_names,
@@ -173,12 +177,13 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             'categories': category_names,
             'departments': department_names,
             'time': time.asctime(),
+            'week': week,
             'version': get_package_version(),
             'assigned_task_names': assigned_task_names,
             'task_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(task_filtered_views)],
             'worktime_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(worktime_filtered_views)],
+            'supervisor_web_port': current_app.config.get('SUPERVISOR_WEB_PORT', 0),
         }
-
         # ~ logging.warning("dt:{}".format(time.time() - t0))
 
         return self.render(self._template, **ctx)
@@ -318,6 +323,29 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             mimetype='text')
 
         return ret
+
+    @flask_admin.expose('/view_hours_of_week', methods=('GET', ))
+    @protect
+    def view_hours_of_week(self, ):          # pylint: disable=no-self-use
+        # ~ logging.warning("request.args:{}".format(request.args))
+        # ~ flash("request.args:{}".format(request.args))
+        # ~ 'selected_week', '2020-W05'
+        selected_week = request.args.get('selected_week')
+        year, week_n = selected_week.split('-W')
+        w_start = Week(int(year), int(week_n))
+        t0 = w_start.monday().isoformat()
+        t1 = (w_start + 1).monday().isoformat()
+        # ~ admin.py:340: t0:2020-01-27, t1:2020-02-03
+        # ~ /worktime/?flt1_user_user_name_equals=Giovanni%20A
+        # ~ &flt2_date_between=2020-01-27+00%3A00%3A00+to+2020-02-03+23%3A59%3A59
+        url_ = compile_filtered_url('worktime', [
+                ('date', 'between', '{}+00:00:00+to+{}+00:00:00'.format(t0, t1)),
+                ('user_user_name', 'equals', flask_login.current_user.name),
+            ]
+        )
+        # ~ logging.warning("t0:{}, t1:{}".format(t0, t1))
+        # ~ logging.warning("url_:{}".format(url_))
+        return redirect(url_)
 
     @flask_admin.expose('/task_search/<string:key>/', methods=('GET', ))
     @protect

@@ -29,6 +29,7 @@ INSTALL_REQUIRES = [
     'tablib', 
     'waitress',
     'iso8601',
+    'isoweek',
     'flask-login',
     'Flask-WTF',
     'markdown',]
