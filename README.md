@@ -1,5 +1,7 @@
 # flask_tracker
 
+Copyright (c) 2019 2020 giovanni.angeli6@gmail.com
+
 'Development Status :: 2 - Pre-Alpha'
 
 a **very** simplified activity-tracker based on [Flask Admin](https://flask-admin.readthedocs.io).
