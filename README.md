@@ -76,4 +76,4 @@ login as:
 
 ## graph of the db schema:
 
-<img src="/doc/data_schema.v3.svg" alt="db schema" style="width: 640px;"/>
+<img src="/doc/data_schema.v6.svg" alt="db schema" style="width: 640px;"/>
