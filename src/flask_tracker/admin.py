@@ -148,8 +148,8 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             ('all tasks in progress', compile_filtered_url('task', [('status', 'equals', 'in_progress')])),
             ('all tasks followed by <b>{}</b>'.format(user_name),
              compile_filtered_url('task', [('followers_user_name', 'contains', user_name)])),
-            ('tasks assigned to <b>{}</b> open or in progress'.format(user_name),
-             compile_filtered_url('task', [('assignee_user_name', 'equals', user_name), ('status', 'in_list', ('open', 'in_progress'))])),
+            ('tasks assigned to <b>{}</b> not closed nor invalid'.format(user_name),
+             compile_filtered_url('task', [('assignee_user_name', 'equals', user_name), ('status', 'not_in_list', ('closed', 'invalid'))])),
             ('all tasks assigned to <b>{}</b>'.format(user_name),
              compile_filtered_url('task', [('assignee_user_name', 'equals', user_name)])),
         ]
@@ -303,8 +303,17 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             request_args[k] = v
 
         model_name = request_args.pop('model_name')[0]
-        filters += [(k, 'in_list', v) for k, v in request_args.items()]
+        if model_name == 'task':
+            filters += [(k, 'in_list', v) for k, v in request_args.items()]
+        elif model_name == 'worktime':
+            def __(k): 
+                ret = "_".join(k.split('_')[1:]) if k != 'task' else k
+                logging.warning("k:{}, ret:{}".format(k, ret))
+                return ret
+            filters += [( __(k), 'in_list', v) for k, v in request_args.items()]
+
         url_ = compile_filtered_url(model_name, filters)
+
         return redirect(url_)
 
     @flask_admin.expose('/markdown_to_html', methods=('POST', ))

@@ -1,7 +1,9 @@
 {% extends 'admin/master.html' %}
 
 {% block brand %}
-    <h4 id="brand" style="width:200px"> Flask Tracker </h4>
+    <h4 id="brand" style="width:200px"> 
+    <a href="https://github.com/giovanni-angeli/flask_tracker">Flask Tracker </a>
+    </h4>
     <div>ver.: {{ version }} </div>
     <style>.container {width: 100%;}</style>
     <style>.page-alfa {background-color: #FFF7DD;}</style>
@@ -138,9 +140,11 @@
                     </select>
                     <p>
                         <div class="row">
-                        <div class="col-sm-6"><button type="submit" formaction="/filtered_view" class="form-control btn-primary">view task list</button></div>
+                        <div class="col-sm-6"><button type="submit" onclick="document.getElementById('model_name').value='task';" 
+                            formaction="/filtered_view" class="form-control btn-primary">view task list</button></div>
+                        <div class="col-sm-6"><button type="submit" onclick="document.getElementById('model_name').value='worktime';" 
+                            formaction="/filtered_view" class="form-control btn-primary">view worked hours list</button></div>
                         </div>
-                        <hr></hr>
                     </p>
                 </form>
             </div>
