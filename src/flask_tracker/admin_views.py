@@ -9,6 +9,7 @@
 # pylint: disable=broad-except
 
 import os
+import sys
 import logging
 import traceback
 import json
@@ -28,13 +29,33 @@ from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-
 
 from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT)
 
+def send_a_mail(email_client, msg_recipients, msg_subject, msg_body):
+    
+    from multiprocessing import Process
+
+    def _do_send():
+        t0 = time.time()
+        for msg_recipient in msg_recipients:
+            if msg_recipient:
+                item = dict(dest=msg_recipient, msg_subject=msg_subject, msg_body=msg_body)
+                email_client.send(**item)
+
+        logging.warning("pid:{}, dt:{}".format(os.getpid(), time.time() - t0))
+        sys.exit(0)
+
+    p = Process(target=_do_send)
+    p.start()
+    # ~ p.join()
+
 
 def get_current_user_name():
     logging.warning("flask_login.current_user.name:{}".format(flask_login.current_user.name))
     return flask_login.current_user.name
 
 
-def _handle_task_modification(form_, tsk_as_dict):     # pylint: disable=no-self-use
+def _handle_task_modification(form_, tsk, current_app):     # pylint: disable=no-self-use
+
+    tsk_as_dict = tsk.object_to_dict()
 
     modifications = []
     deflt_ = form_.data.get('list_form_pk') is not None
@@ -65,7 +86,7 @@ def _handle_task_modification(form_, tsk_as_dict):     # pylint: disable=no-self
                 elif deflt_:
                     b = " --> {}".format(a)
                 else:
-                    b = "{} --> {}".format(a, b)
+                    b = "{} --> {}".format(b, a)
                 modifications.append((k, str(b)))
 
         except Exception as exc:
@@ -81,6 +102,18 @@ def _handle_task_modification(form_, tsk_as_dict):     # pylint: disable=no-self
         }
         logging.warning(json.dumps(args, indent=2))
         session.add(History(**args))
+
+        msg_subject = "[FT Notify] - task: {} modified".format(tsk.name)
+        msg_body = json.dumps(
+            dict(task=tsk.name, user=flask_login.current_user.name, modifications=modifications),
+            indent=2)
+        msg_recipients = [follower.email for follower in tsk.followers]
+
+        email_client = getattr(current_app, 'email_client_tracker')
+        if email_client:
+            t0 = time.time()
+            send_a_mail(email_client, msg_recipients, msg_subject, msg_body)
+            logging.warning("pid:{}, dt:{}".format(os.getpid(), time.time() - t0))
 
 
 def _display_tasks_as_links(cls, context, obj, name):   # pylint: disable=unused-argument
@@ -199,6 +232,7 @@ def define_view_classes(current_app):
             'description',
             'user.name',
             'task.name',
+            'task.milestone',
             'task',
         )
 
@@ -410,7 +444,8 @@ def define_view_classes(current_app):
             'department',
             'date_created',
             'priority',
-            'assignee',
+            ('assignee',
+             ('assignee.name')),
             ('milestone',
              ('milestone.project.name',
               'milestone.name',
@@ -615,7 +650,7 @@ def define_view_classes(current_app):
                         raise validators.ValidationError(msg)
 
             if not is_created:
-                _handle_task_modification(form_, obj.object_to_dict())
+                _handle_task_modification(form_, obj, current_app)
 
             ret = super(TaskView, self).on_model_change(form, obj, is_created)
 

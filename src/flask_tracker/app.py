@@ -10,12 +10,14 @@ import os
 import sys
 import logging
 import traceback
+import time
 
 from flask import Flask, url_for  # pylint: disable=import-error
 
 from flask_tracker.models import init_orm
 from flask_tracker.admin import init_admin
 
+from flask_tracker.email_client import EMailClient
 from flask_tracker.wiki.routes import bp as wiki_blueprint
 
 
@@ -83,6 +85,23 @@ def initialize_instance():
         logging.warning("copying {} in {}".format(file, dst))
         shutil.copy(file, dst)
 
+def create_email_client(flask_app):
+    
+    email_client  = None
+    
+    EMAIL_CREDENTIALS_PATH = flask_app.config.get('EMAIL_CREDENTIALS_PATH', '----')
+    IMAP_HOST_PORT = flask_app.config.get('IMAP_HOST_PORT')
+    SMTP_HOST_PORT = flask_app.config.get('SMTP_HOST_PORT')
+    CHECK_EMAIL_TIME_STEP = flask_app.config.get('CHECK_EMAIL_TIME_STEP', 60)
+    if (os.path.exists(EMAIL_CREDENTIALS_PATH) and IMAP_HOST_PORT and SMTP_HOST_PORT):
+        email_client = EMailClient(path_to_credentials=EMAIL_CREDENTIALS_PATH, 
+                imap_host_port=IMAP_HOST_PORT, 
+                smtp_host_port=SMTP_HOST_PORT,
+                time_step=CHECK_EMAIL_TIME_STEP)
+
+    setattr(flask_app, 'email_client_tracker', email_client)
+
+    return email_client 
 
 def main():
 
@@ -90,16 +109,27 @@ def main():
 
     HOST = flask_app.config.get('HOST')
     PORT = flask_app.config.get('PORT')
-    logging.warning("start serving admin UI on http://{}:{}".format(HOST, PORT))
-    if flask_app.config.get('ENV') == 'production':
 
-        from waitress import serve      # pylint: disable=import-error
-        serve(flask_app, host=HOST, port=PORT)
+    from waitress.server import create_server
+    from waitress.wasyncore import poll2
 
-    else:
+    server = create_server(flask_app, host=HOST, port=PORT)
 
-        flask_app.run(host=HOST, port=PORT)
+    server.print_listen("Serving on http://{}:{}")
 
+    email_client = create_email_client(flask_app)
+    logging.warning("email_client:{}".format(email_client))
+
+    try:
+        timeout = 5.0
+        last_email_check = 0
+        while server._map:
+            poll2(timeout, server._map)
+            if (email_client):
+                email_client.poll()
+    except (SystemExit, KeyboardInterrupt):
+        server.close()
+    
 
 if __name__ == '__main__':
 
