@@ -697,6 +697,12 @@ def define_view_classes(current_app):
             },
         }
 
+        form_widget_args = {
+            'name': {
+                'readonly': True
+            },
+        }
+
         column_filters = (
             'name',
             'date_modified',
@@ -724,13 +730,17 @@ def define_view_classes(current_app):
             'name': display_name,
         })
 
+        def get_edit_form(self):
+
+            form_ = super().get_create_form()
+            form_.document = fields.FileField(u'Document', default=self.display_name)
+            return form_
+
         def get_create_form(self):
 
             form_ = super().get_create_form()
             form_.document = fields.FileField(u'Document')
-
             del form_.name
-
             return form_
 
         def after_model_delete(self, obj):
