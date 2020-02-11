@@ -8,15 +8,12 @@
 # pylint: disable=no-self-use
 # pylint: disable=broad-except
 
-import os
 import asyncio
 import smtplib
 import imaplib
 import time
 import ssl
-import json
 import logging
-import subprocess
 import socket
 import traceback
 
@@ -42,17 +39,18 @@ def set_logging(log_level):
     logger_.addHandler(ch)
     logger_.setLevel(log_level)
 
+
 class EMailClient(object):    # pylint: disable=too-many-instance-attributes
 
     user = None
     password = None
     machie_id = None
 
-    def __init__(self, 
-            path_to_credentials, 
-            imap_host_port, 
-            smtp_host_port,
-            time_step=60):
+    def __init__(self,
+                 path_to_credentials,
+                 imap_host_port,
+                 smtp_host_port,
+                 time_step=60):
 
         self.path_to_credentials = path_to_credentials
         self.imap_host, self.imap_port = imap_host_port.split(':')
@@ -164,7 +162,7 @@ class EMailClient(object):    # pylint: disable=too-many-instance-attributes
 
     def poll(self):
 
-        if time.time() - self.last_email_check > self.time_step:
+        if self.time_step > 0 and time.time() - self.last_email_check > self.time_step:
             self.last_email_check = time.time()
             try:
 
@@ -176,6 +174,7 @@ class EMailClient(object):    # pylint: disable=too-many-instance-attributes
                 logging.info(exc)
             except Exception as exc:
                 logging.error(exc)
+                logging.debug(traceback.format_exc())
 
             dt = time.time() - self.last_email_check
             if dt > 1:
@@ -186,24 +185,3 @@ class EMailClient(object):    # pylint: disable=too-many-instance-attributes
         while True:
             self.poll()
             await asyncio.sleep(self.time_step)
-
-
-def main():
-
-    set_logging('WARNING')
-
-    logging.warning("************** start")
-    logging.warning("EMAIL_CREDENTIALS_PATH:{}".format(EMAIL_CREDENTIALS_PATH))
-    logging.warning("IMAP_HOST_PORT:{}".format(IMAP_HOST_PORT))
-    logging.warning("SMTP_HOST_PORT:{}".format(SMTP_HOST_PORT))
-    logging.warning("TIME_STEP:{}".format(TIME_STEP))
-    logging.warning("**************")
-
-    client = EMailClient()
-    ensure_future = asyncio.ensure_future(client.receive_loop())
-    asyncio.get_event_loop().run_forever()
-
-
-if __name__ == '__main__':
-
-    main()

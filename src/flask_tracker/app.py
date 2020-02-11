@@ -114,13 +114,13 @@ def main():
     from waitress.wasyncore import poll2
 
     server = create_server(flask_app, host=HOST, port=PORT)
-
-    server.print_listen("Serving on http://{}:{}")
+    logging.warning("server:{} serving {} on http://{}:{}".format(server, flask_app, HOST, PORT))
 
     email_client = create_email_client(flask_app)
     logging.warning("email_client:{}".format(email_client))
 
     try:
+
         timeout = 5.0
         last_email_check = 0
         while server._map:
@@ -128,7 +128,10 @@ def main():
             if (email_client):
                 email_client.poll()
     except (SystemExit, KeyboardInterrupt):
+
         server.close()
+        if (email_client):
+            email_client.close()
     
 
 if __name__ == '__main__':
