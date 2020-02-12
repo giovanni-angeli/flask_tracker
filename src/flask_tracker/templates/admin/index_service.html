@@ -1,0 +1,68 @@
+{% extends 'admin/master.html' %}
+
+{% block brand %}
+    <h4 id="brand" style="width:200px"> 
+    <a href="https://github.com/giovanni-angeli/flask_tracker">Flask Tracker </a>
+    </h4>
+    <div>ver.: {{ version }} </div>
+    <style>.container {width: 100%;}</style>
+    <style>.page-alfa {background-color: #FFF7DD;}</style>
+{% endblock %}
+
+
+{% block access_control %}
+{% if current_user.is_authenticated %}
+<div class="btn-group pull-right">
+    <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+        <i class="icon-user"></i> {{ current_user.login }} <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+        <li><a href="{{ url_for('admin.logout') }}">Log out</a></li>
+    </ul>
+</div>
+{% endif %}
+{% endblock %}
+
+
+{% block body %}
+
+{{ super() }}
+
+    <div>
+        {% if current_user.is_authenticated %}
+			<div class="col-sm-4">
+				<label for="add_task_button"> Add a New Claim </label>
+				<button name="add_claim_button" class="form-control btn-primary" onclick="window.open('/claim/new/?owner={{ current_user.login }}', name='_self');"> New Claim </button>
+			</div>
+			<hr></hr>
+
+			<script>
+				var init = function(){document.getElementById('input_date').valueAsDate = new Date();}
+				init();
+			</script>
+        {% else %}
+        <form method="POST" action="">
+            {{ form.hidden_tag() if form.hidden_tag }}
+            {% for f in form if f.type != 'CSRFTokenField' %}
+            <div>
+            {{ f.label }}
+            {{ f }}
+            {% if f.errors %}
+            <ul>
+                {% for e in f.errors %}
+                <li>{{ e }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            </div>
+            {% endfor %}
+            <button class="btn" type="submit">Submit</button>
+        </form>
+        {{ link | safe }}
+        {% endif %}
+    </div>
+
+{% if current_user.is_authenticated %}
+{% endif %}
+
+{% endblock body %}

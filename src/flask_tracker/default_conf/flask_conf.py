@@ -4,6 +4,7 @@ import os
 import pathlib
 import re
 
+
 def slugify(text):
     try:
         import unidecode
@@ -13,17 +14,20 @@ def slugify(text):
 
     return re.sub(r'[\W_]+', '-', text)
 
+
 HERE = pathlib.Path(__file__).parent
 categories_ = []
-with (HERE / "categories.txt").open('rt') as f: categories_ = [l.strip() for l in f.readlines()]
+with (HERE / "categories.txt").open('rt') as f:
+    categories_ = [l.strip() for l in f.readlines()]
 
 sample_task_content_lines_ = []
-with (HERE / "sample_task_content.txt").open('rt') as f: sample_task_content_lines_ = f.readlines()
+with (HERE / "sample_task_content.txt").open('rt') as f:
+    sample_task_content_lines_ = f.readlines()
 
 # ~ DATA_PATH =  '/mnt/dati/flask_tracker/data'
-DATA_PATH =  '/opt/flask_tracker/data'
+DATA_PATH = '/opt/flask_tracker/data'
 
-database_file_ = os.path.join(DATA_PATH, 'tracker.v6.sqlite')
+database_file_ = os.path.join(DATA_PATH, 'tracker.vX.sqlite')
 wiki_contents_dir_ = os.path.join(DATA_PATH, 'wiki')
 
 # ~ ######################################
@@ -82,27 +86,74 @@ ATTACHMENT_PATH = os.path.join(DATA_PATH, 'attachments')
 MAX_OPEN_TASK_PER_USER = 30
 
 USERS = (
-    ('admin',    'admin', 'alfadispenser.com'   , 'admin', 5),
-    ('test',    'test', ''   , 'guest', 0),
-    ('anonymous',    '', ''   , 'guest', 0),)
+    ('admin', 'admin', 'alfadispenser.com', 'admin', 5),
+    ('test', 'test', '', 'guest', 0),
+    ('anonymous', '', '', 'guest', 0),)
 
-SAMPLE_TASK_CONTENT = "".join(sample_task_content_lines_)
+SAMPLE_TASK_CONTENT = """
+###  Context
+
+...
+
+*describe here the context of this task*
+
+###  Prerequisites
+
+  1. first  requirement
+  1. second requirement
+  1. third  requirement
+
+###  Obiettivo
+
+*describe here what this task is aimed to*
+
+####  Steps to be done
+
+  1. first  step
+  1. second  step
+  1. third  step
+
+####  Done steps
+___________
+
+"""
+
+SAMPLE_CLAIM_CONTENT = """
+
+###  header
+
+
+####  footer
+___________
+
+"""
+
 DEPARTMENTS = [
     ('SW', 'SW'),
     ('FW', 'FW'),
     ('mechanics', 'Mechanics'),
     ('electronics', 'Electronics'),
-    ('lab', 'Lab'),]
+    ('lab', 'Lab'), ]
 
-TASK_PRIORITIES = [
+CLAIM_GROUPS = [
+    ('gruppo_colorante', 'Gruppo Colorante'),
+    ('gruppo_base', 'Gruppo Base'),
+    ('EV_colorante', 'EV Colorante'),
+    ('EV_base', 'EV Base'),
+    ('autocap', 'Autocap'),
+    ('umidificatore', 'Umidificatore'),
+    ('parti_elettroniche', 'Parti Elettroniche'),
+    ('altre_parti_meccaniche', 'Altre Parti Meccaniche')]
+
+ITEM_PRIORITIES = [
     ('low', 'Low'),
     ('high', 'High'),
     ('normal', 'Normal')]
 
 CATEGORY_DESCRIPTION = "info about how to use the semantic of the field 'category'."
-TASK_CATEGORIES = [ (slugify(l), l.capitalize()) for l in categories_ ]
+TASK_CATEGORIES = [(slugify(l), l.capitalize()) for l in categories_]
 
-TASK_STATUSES = [
+ITEM_STATUSES = [
     ('new', 'New'),
     ('open', 'Open'),
     ('in_progress', 'In Progress'),
@@ -139,6 +190,3 @@ ROLES_CAPABILITIES_MAP = {
     },
     'guest': {'default': 'r'},
     'suspended': {'default': ''}, }
-
-
-

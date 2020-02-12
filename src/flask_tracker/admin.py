@@ -38,6 +38,7 @@ from flask_tracker.models import (
     WorkTime,
     Attachment,
     History,
+    Claim,
     MODELS_GLOBAL_CONTEXT,
     get_package_version)
 
@@ -127,6 +128,11 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
     def index(self, ):
 
         # ~ t0 = time.time()
+    
+        if flask_login.current_user.role == 'service':
+            self._template = "/admin/index_service.html"
+        else:
+            self._template = "/admin/index.html"
 
         session = MODELS_GLOBAL_CONTEXT['session']
 
@@ -331,6 +337,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             response=Markup(msg),
             mimetype='text')
 
+        logging.warning("ret:{}".format(ret))
         return ret
 
     @flask_admin.expose('/view_hours_of_week', methods=('GET', ))
@@ -387,6 +394,8 @@ def init_admin(app, db):
     admin_.add_view(MilestoneView(Milestone, db.session))     # pylint: disable=undefined-variable
     admin_.add_view(OrderView(Order, db.session))             # pylint: disable=undefined-variable
     admin_.add_view(AttachmentView(Attachment, db.session))    # pylint: disable=undefined-variable
+
+    admin_.add_view(ClaimView(Claim, db.session))               # pylint: disable=undefined-variable
 
     admin_.add_view(TrackerModelView(Customer, db.session, category="admin"))    # pylint: disable=undefined-variable
     admin_.add_view(HistoryView(History, db.session, category="admin"))    # pylint: disable=undefined-variable

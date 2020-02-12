@@ -82,12 +82,15 @@ def get_models_map():
 
 def get_default_task_content():
 
-    return MODELS_GLOBAL_CONTEXT['app'].config.get("SAMPLE_TASK_CONTENT", " *** ")
+    return MODELS_GLOBAL_CONTEXT['app'].config.get("SAMPLE_TASK_CONTENT", " ** sample task ** ")
 
+def get_default_claim_content():
+
+    return MODELS_GLOBAL_CONTEXT['app'].config.get("SAMPLE_CLAIM_CONTENT", " ** sample claim ** ")
 
 def generate_id():
-    return str(uuid.uuid4())
 
+    return str(uuid.uuid4())
 
 def insert_users_in_db(app, db):
 
@@ -108,7 +111,8 @@ def insert_users_in_db(app, db):
             except Exception as exc:
                 db.session.rollback()
                 logging.info(exc)
-
+            else:
+                logging.warning(" name:{}, pwd_:{}, email_:{}, role:{}, cost:{}".format( name, pwd_, email_, role, cost))
 
 def fix_missing_number_in_tasks(app, db):
 
@@ -215,6 +219,14 @@ followings = sqlalchemy_db_.Table('followings',
                                       primary_key=True),
                                   sqlalchemy_db_.Column('task_id', sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('task.id'), primary_key=True))
 
+claimings = sqlalchemy_db_.Table('claimings',
+                                  sqlalchemy_db_.Column(
+                                      'user_id',
+                                      sqlalchemy_db_.Unicode,
+                                      sqlalchemy_db_.ForeignKey('user.id'),
+                                      primary_key=True),
+                                  sqlalchemy_db_.Column('claim_id', sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('claim.id'), primary_key=True))
+
 
 class BaseModel(object):                         # pylint: disable=too-few-public-methods
 
@@ -309,6 +321,7 @@ class Customer(NamedModel, sqlalchemy_Model):   # pylint: disable=too-few-public
 
     db = MODELS_GLOBAL_CONTEXT['db']
     orders = db.relationship('Order', backref='customer')
+    claims = db.relationship('Claim', backref='customer')
 
 
 class Order(NamedModel, sqlalchemy_Model):    # pylint: disable=too-few-public-methods
@@ -365,6 +378,7 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     role = db.Column(db.Unicode(32), default='guest')
     worktimes = db.relationship('WorkTime', backref='user')
     assigned_tasks = db.relationship('Task', backref='assignee')
+    assigned_claims = db.relationship('Claim', backref='owner')
     cost_per_hour = db.Column(db.Float, default=0.00, doc='cost per hour in arbitrary unit')
 
     modifications = db.relationship('History', backref='user')
@@ -397,44 +411,28 @@ class Attachment(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-pu
 
     db = MODELS_GLOBAL_CONTEXT['db']
     attached_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
+    claimed_id = db.Column(db.Unicode, db.ForeignKey('claim.id'))
 
 
 class History(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
-    task_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
     user_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
 
+    task_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
+    claim_id = db.Column(db.Unicode, db.ForeignKey('claim.id'))
 
-class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
+
+class ItemBase(NamedModel):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
 
-    id = db.Column(db.Unicode, primary_key=True, nullable=False, default=generate_id)
-
     name = db.Column(db.Unicode(64), nullable=False)
-
-    content = db.Column(db.Unicode(5 * 1024), default=get_default_task_content)
 
     department = db.Column(db.Unicode(16))
     created_by = db.Column(db.Unicode(64))
     status = db.Column(db.Unicode(16), default='new')
     priority = db.Column(db.Unicode(16), default='low')
-    category = db.Column(db.Unicode(16), default='')
-    planned_time = db.Column(db.Float, default=0.00, doc='hours')
-
-    worktimes = db.relationship('WorkTime', backref='task')
-    attachments = db.relationship('Attachment', backref='attached')
-    modifications = db.relationship('History', backref='task')
-
-    followers = db.relationship('User', secondary=followings, backref='followed')
-
-    order_id = db.Column(db.Unicode, db.ForeignKey('order.id'))
-    milestone_id = db.Column(db.Unicode, db.ForeignKey('milestone.id'))
-    assignee_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
-
-    parent_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
-    parent = db.relationship("Task", remote_side=[id])
 
     @property
     def formatted_attach_names(self):
@@ -444,6 +442,58 @@ class Task(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     @formatted_attach_names.setter
     def formatted_attach_names(self, val):
         pass
+
+
+class Task(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
+
+    db = MODELS_GLOBAL_CONTEXT['db']
+
+    id = db.Column(db.Unicode, primary_key=True, nullable=False, default=generate_id)
+
+    content = db.Column(db.Unicode(5 * 1024), default=get_default_task_content)
+
+    category = db.Column(db.Unicode(16), default='')
+    planned_time = db.Column(db.Float, default=0.00, doc='hours')
+
+    order_id = db.Column(db.Unicode, db.ForeignKey('order.id'))
+    milestone_id = db.Column(db.Unicode, db.ForeignKey('milestone.id'))
+    assignee_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
+
+    parent_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
+    parent = db.relationship("Task", remote_side=[id])
+
+    worktimes = db.relationship('WorkTime', backref='task')
+
+    attachments = db.relationship('Attachment', backref='attached')
+    modifications = db.relationship('History', backref='task')
+    followers = db.relationship('User', secondary=followings, backref='followed')
+
+
+class Claim(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
+
+    db = MODELS_GLOBAL_CONTEXT['db']
+
+    id = db.Column(db.Unicode, primary_key=True, nullable=False, default=generate_id)
+
+    content = db.Column(db.Unicode(5 * 1024), default=get_default_claim_content)
+
+    contact = db.Column(db.Unicode()) #: (mail)
+    machine_model = db.Column(db.Unicode(64))
+    serial_number = db.Column(db.Unicode(64))
+    installation_date = db.Column(db.DateTime, default=datetime.utcnow)
+    installation_place = db.Column(db.Unicode(64))
+    damaged_group = db.Column(db.Unicode(64)) # (menù tendina: gruppo colorante, gruppo base, EV colorante, EV base, Autocap, umidificatore, parti elettroniche, altre parti meccaniche)
+    quantity = db.Column(db.Integer) # 
+    serial_number_of_damaged_part = db.Column(db.Unicode(64)) # 
+    the_part_have_been_requested = db.Column(db.Boolean) #  (menù tendina: si, no)
+    is_covered_by_warranty = db.Column(db.Boolean) #   (menù tendina: si, no)
+
+    customer_id = db.Column(db.Unicode, db.ForeignKey('customer.id'))
+    owner_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
+
+    attachments = db.relationship('Attachment', backref='claimed')
+    modifications = db.relationship('History', backref='claim')
+    followers = db.relationship('User', secondary=claimings, backref='claimed')
 
 
 def do_delete_pending_objects(session, flush_context, instances=None):  # pylint: disable=unused-argument

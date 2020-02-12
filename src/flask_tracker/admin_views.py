@@ -29,8 +29,9 @@ from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-
 
 from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT)
 
+
 def send_a_mail(email_client, msg_recipients, msg_subject, msg_body):
-    
+
     from multiprocessing import Process
 
     def _do_send():
@@ -53,9 +54,9 @@ def get_current_user_name():
     return flask_login.current_user.name
 
 
-def _handle_task_modification(form_, tsk, current_app):     # pylint: disable=no-self-use
+def _handle_item_modification(form_, item, current_app):     # pylint: disable=no-self-use, too-many-branches
 
-    tsk_as_dict = tsk.object_to_dict()
+    item_as_dict = item.object_to_dict()
 
     modifications = []
     deflt_ = form_.data.get('list_form_pk') is not None
@@ -96,18 +97,20 @@ def _handle_task_modification(form_, tsk, current_app):     # pylint: disable=no
 
         session = MODELS_GLOBAL_CONTEXT['session']
         args = {
-            'task_id': tsk_as_dict['id'],
+            '{}_id'.format(item.__tablename__): item_as_dict['id'],
             'user_id': flask_login.current_user.id,
             'description': json.dumps(modifications, indent=2)
         }
         logging.warning(json.dumps(args, indent=2))
         session.add(History(**args))
 
-        msg_subject = "[FT Notify] - task: {} modified".format(tsk.name)
-        msg_body = json.dumps(
-            dict(task=tsk.name, user=flask_login.current_user.name, modifications=modifications),
-            indent=2)
-        msg_recipients = [follower.email for follower in tsk.followers]
+        msg_subject = "[FT Notify] - {}: {} modified".format(item.__tablename__, item.name)
+        msg_body = json.dumps({
+            item.__tablename__: item.name,
+            'user': flask_login.current_user.name,
+            'modifications': modifications
+        }, indent=2)
+        msg_recipients = [follower.email for follower in item.followers]
 
         email_client = getattr(current_app, 'email_client_tracker')
         if email_client:
@@ -171,13 +174,13 @@ def define_view_classes(current_app):
         def has_capabilities(user, table_name, operation='*'):
 
             role = user.role
-            capabilities_map = current_app.config.get('ROLES_CAPABILITIES_MAP', {})
-            default_cap = capabilities_map[role].get('default')
-            cap = capabilities_map[role].get(table_name, default_cap)
+            capabilitie_map = current_app.config.get('ROLE_CAPABILITIE_MAP', {})
+            default_cap = capabilitie_map.get(role, {}).get('default')
+            cap = capabilitie_map.get(role, {}).get(table_name, default_cap)
 
             # ~ logging.warning("role:{}, table_name:{}, operation:{}, cap:{}".format(role, table_name, operation, cap))
 
-            return operation in cap
+            return cap is not None and operation in cap
 
         def is_accessible(self):
 
@@ -384,7 +387,7 @@ def define_view_classes(current_app):
         }
 
         form_choices = {
-            'role': [(k, k) for k in current_app.config.get('ROLES_CAPABILITIES_MAP', {})],
+            'role': [(k, k) for k in current_app.config.get('ROLE_CAPABILITIE_MAP', {})],
         }
 
         column_list = (
@@ -433,9 +436,197 @@ def define_view_classes(current_app):
 
         column_labels = dict(worktimes='Worked Hours in This Week')
 
-    class TaskView(TrackerModelView):     # pylint: disable=unused-variable
+    class ItemViewBase(TrackerModelView):     # pylint: disable=unused-variable
 
-        can_delete = current_app.config.get('CAN_DELETE_TASK', True)
+        def get_edit_form(self):
+
+            form_ = super().get_edit_form()
+
+            # ~ NOTE: The value of this filed will be updated in javascript on the edit page (i.e. at 'edit' time)
+            form_.formatted_attach_names = fields.StringField(
+                'attachments', render_kw=dict(value="*", readonly=True, height="1px"))
+
+            cnt_description = Markup(
+                'NOTE: you can use <a target="blank_" href="https://daringfireball.net/projects/markdown/syntax">Markdown syntax</a>. Use preview button to see what you get.')
+
+            form_.content = fields.TextAreaField('content', [validators.optional(), validators.length(max=5 * 1000)],
+                                                 description=cnt_description,
+                                                 render_kw={"style": "background:#fff; border:dashed #DD3333 1px; height:480px;"})
+
+            form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={})
+
+            return form_
+
+        @contextfunction
+        def get_detail_value(self, context, model, name):
+            ret = super().get_detail_value(context, model, name)
+            if name == 'content':
+                ret = markdown.markdown(ret)
+                ret = Markup(ret)
+            elif name == 'attachments':
+                ret = model.formatted_attach_names
+            return ret
+
+        def on_model_change(self, form_, obj, is_created):
+
+            session = MODELS_GLOBAL_CONTEXT['session']
+
+            if is_created:
+                if not (hasattr(form_, 'created_by') and form_.created_by and form_.created_by.data):
+                    obj.created_by = flask_login.current_user.name
+                if hasattr(obj, 'assignee') and not (hasattr(form_, 'assignee')
+                                                     and form_.assignee and form_.assignee.data):
+                    obj.assignee = session.query(User).filter(User.name == 'anonymous').first()
+                if hasattr(obj, 'owner') and not (hasattr(form_, 'owner') and form_.owner and form_.owner.data):
+                    obj.owner = session.query(User).filter(User.name == 'anonymous').first()
+
+            if hasattr(obj, 'parent') and obj == obj.parent:
+                obj.parent = None
+                msg = 'Cannot make task {} parent of itself.'.format(obj.name)
+                raise validators.ValidationError(msg)
+
+            if hasattr(form_, 'status') and form_.status:
+                next_ = form_.status.data
+
+                if next_ in ('open', 'in_progress'):
+                    if hasattr(obj, 'assignee') and (not obj.assignee or obj.assignee.name == 'anonymous'):
+                        msg = 'task {} must have a known assignee, to be {}.'.format(obj.name, next_)
+                        raise validators.ValidationError(msg)
+
+            if not is_created:
+                _handle_item_modification(form_, obj, current_app)
+
+            ret = super().on_model_change(form, obj, is_created)
+
+            return ret
+
+        def display_id_short(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
+            # ~ logging.warning("obj({}):{}".format(type(obj), obj))
+            # ~ logging.warning("dir(obj):{}".format(dir(obj)))
+            value = getattr(obj, name)
+            ret = value
+            try:
+                html_ = '<a href="/history/?flt0_{0}_{0}_name_equals={1}" title="view history">{2}</a>'.format(
+                    obj.__tablename__, urllib.parse.quote_plus(obj.name), value)
+                ret = Markup(html_)
+            except BaseException:
+                logging.warning(traceback.format_exc())
+            return ret
+
+        column_formatters = TrackerModelView.column_formatters.copy()
+        column_formatters.update({
+            'id_short': display_id_short,
+        })
+
+    class ClaimView(ItemViewBase):     # pylint: disable=unused-variable
+
+        can_delete = current_app.config.get('CAN_DELETE_CLAIM', True)
+
+        column_filters = (
+            'name',
+            'status',
+            'date_created',
+            'description',
+            'owner.name',
+            'followers.name',
+            'customer.name',
+            'machine_model',
+            'serial_number',
+            'installation_date',
+            'installation_place',
+        )
+
+        form_args = {
+            'contact': {
+                'label': 'Contact (email)',
+            },
+        }
+
+        form_choices = {
+            'damaged_group': current_app.config.get('CLAIM_GROUPS'),
+            'machine_model': current_app.config.get('CLAIM_MACHINE_MODELS'),
+            'status': current_app.config.get('ITEM_STATUSES'),
+            'priority': current_app.config.get('ITEM_PRIORITIES'),
+        }
+
+        column_searchable_list = (
+            'id',
+            'name',
+            'description',
+            'machine_model',
+            'serial_number',
+        )
+
+        form_columns = (
+            'name',
+            'description',
+            'owner',
+            'status',
+            'priority',
+            'customer',
+            'followers',
+            # ~ 'attachments',
+            # ~ 'content',
+            'contact',
+            'machine_model',
+            'serial_number',
+            'installation_date',
+            'installation_place',
+            'quantity',
+            'damaged_group',
+            'serial_number_of_damaged_part',
+            'customer',
+            'owner',
+            'the_part_have_been_requested',
+            'is_covered_by_warranty',
+            # ~ 'modifications',
+            'followers',
+        )
+
+        column_list = (
+            'name',
+            'id_short',
+            'description',
+            'owner',
+            'status',
+            'customer',
+            'priority',
+            # ~ 'date_created',
+            # ~ 'followers',
+            'machine_model',
+            'serial_number',
+            'installation_date',
+            # ~ 'attachments',
+        )
+
+        column_details_list = (
+            'id_short',
+            'name',
+            'description',
+            'owner',
+            'status',
+            'priority',
+            'customer',
+            'followers',
+            'attachments',
+            'content',
+            'contact',
+            'machine_model',
+            'serial_number',
+            'installation_date',
+            'installation_place',
+            'quantity',
+            'damaged_group',
+            'serial_number_of_damaged_part',
+            'customer',
+            'owner',
+            'the_part_have_been_requested',
+            'is_covered_by_warranty',
+            # ~ 'modifications',
+            'followers',
+        )
+
+    class TaskView(ItemViewBase):     # pylint: disable=unused-variable
 
         column_sortable_list = (
             'name',
@@ -466,8 +657,8 @@ def define_view_classes(current_app):
 
         form_choices = {
             'department': current_app.config.get('DEPARTMENTS'),
-            'status': current_app.config.get('TASK_STATUSES'),
-            'priority': current_app.config.get('TASK_PRIORITIES'),
+            'status': current_app.config.get('ITEM_STATUSES'),
+            'priority': current_app.config.get('ITEM_PRIORITIES'),
             'category': current_app.config.get('TASK_CATEGORIES'),
         }
 
@@ -568,17 +759,6 @@ def define_view_classes(current_app):
                 logging.warning(traceback.format_exc())
             return ret
 
-        def display_id_short(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
-            value = getattr(obj, name)
-            ret = value
-            try:
-                html_ = '<a href="/history/?flt0_task_task_name_equals={}" title="view history">{}</a>'.format(
-                    urllib.parse.quote_plus(obj.name), value)
-                ret = Markup(html_)
-            except BaseException:
-                logging.warning(traceback.format_exc())
-            return ret
-
         def display_milestone(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
             value = getattr(obj, name)
             ret = value
@@ -590,71 +770,11 @@ def define_view_classes(current_app):
                 logging.warning(traceback.format_exc())
             return ret
 
-        column_formatters = TrackerModelView.column_formatters.copy()
+        column_formatters = ItemViewBase.column_formatters.copy()
         column_formatters.update({
-            'id_short': display_id_short,
             'milestone': display_milestone,
             'worktimes': display_worktimes,
         })
-
-        def get_edit_form(self):
-
-            form_ = super().get_edit_form()
-
-            # ~ NOTE: The value of this filed will be updated in javascript on the edit page (i.e. at 'edit' time)
-            form_.formatted_attach_names = fields.StringField(
-                'attachments', render_kw=dict(value="*", readonly=True, height="1px"))
-
-            cnt_description = Markup(
-                'NOTE: you can use <a target="blank_" href="https://daringfireball.net/projects/markdown/syntax">Markdown syntax</a>. Use preview button to see what you get.')
-
-            form_.content = fields.TextAreaField('content', [validators.optional(), validators.length(max=5 * 1000)],
-                                                 description=cnt_description,
-                                                 render_kw={"style": "background:#fff; border:dashed #DD3333 1px; height:480px;"})
-
-            form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={})
-
-            return form_
-
-        @contextfunction
-        def get_detail_value(self, context, model, name):
-            ret = super().get_detail_value(context, model, name)
-            if name == 'content':
-                ret = markdown.markdown(ret)
-                ret = Markup(ret)
-            elif name == 'attachments':
-                ret = model.formatted_attach_names
-            return ret
-
-        def on_model_change(self, form_, obj, is_created):
-
-            session = MODELS_GLOBAL_CONTEXT['session']
-
-            if is_created:
-                if not (hasattr(form_, 'created_by') and form_.created_by and form_.created_by.data):
-                    obj.created_by = flask_login.current_user.name
-                if not (hasattr(form_, 'assignee') and form_.assignee and form_.assignee.data):
-                    obj.assignee = session.query(User).filter(User.name == 'anonymous').first()
-
-            if obj == obj.parent:
-                obj.parent = None
-                msg = 'Cannot make task {} parent of itself.'.format(obj.name)
-                raise validators.ValidationError(msg)
-
-            if hasattr(form_, 'status') and form_.status:
-                next_ = form_.status.data
-
-                if next_ in ('open', 'in_progress'):
-                    if not obj.assignee or obj.assignee.name == 'anonymous':
-                        msg = 'task {} must have a known assignee, to be {}.'.format(obj.name, next_)
-                        raise validators.ValidationError(msg)
-
-            if not is_created:
-                _handle_task_modification(form_, obj, current_app)
-
-            ret = super(TaskView, self).on_model_change(form, obj, is_created)
-
-            return ret
 
     class HistoryView(TrackerModelView):     # pylint: disable=unused-variable
 
@@ -664,9 +784,17 @@ def define_view_classes(current_app):
 
         column_labels = dict(user='Author', description="modifications", date_created="Date")
 
+        column_sortable_list = (
+            'date_created',
+            ('claim', ('claim.name')),
+            ('task', ('task.name')),
+        )
+
         column_searchable_list = (
             'task.id',
             'task.name',
+            'claim.id',
+            'claim.name',
             'user.name',
             'description',
         )
@@ -675,26 +803,29 @@ def define_view_classes(current_app):
             # ~ 'description',
             'date_created',
             'task.name',
+            'claim.name',
             'user.name',
         )
 
         column_list = (
             # ~ 'name',
             'task',
+            'claim',
             'user',
             'date_created',
             'description',
         )
 
-        def display_task(self, context, obj, name):   # pylint: disable=unused-argument,no-self-use
+        def display_item(self, context, obj, name):   # pylint: disable=unused-argument,no-self-use
 
             t = getattr(obj, name)
             ret = t
-            try:
-                html_ = '<a href="/task/details/?id={}">{}</a> {}'.format(t.id, t.id_short or 0, t.name)
-                ret = Markup(html_)
-            except BaseException:
-                logging.warning(traceback.format_exc())
+            if t is not None:
+                try:
+                    html_ = '<a href="/{}/details/?id={}">{}</a> {}'.format(name, t.id, t.id_short or 0, t.name)
+                    ret = Markup(html_)
+                except BaseException:
+                    logging.warning(traceback.format_exc())
             return ret
 
         def display_modifications(self, context, obj, name):   # pylint: disable=unused-argument,no-self-use
@@ -717,7 +848,8 @@ def define_view_classes(current_app):
 
         column_formatters = TrackerModelView.column_formatters.copy()
         column_formatters.update({
-            'task': display_task,
+            'task': display_item,
+            'claim': display_item,
             'description': display_modifications,
         })
 
@@ -726,6 +858,9 @@ def define_view_classes(current_app):
         form_args = {
             'attached': {
                 'label': 'attached task',
+            },
+            'claimed': {
+                'label': 'attached claim',
             },
             'description': {
                 'label': 'title:TAGS',
