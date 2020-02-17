@@ -84,13 +84,16 @@ def get_default_task_content():
 
     return MODELS_GLOBAL_CONTEXT['app'].config.get("SAMPLE_TASK_CONTENT", " ** sample task ** ")
 
+
 def get_default_claim_content():
 
     return MODELS_GLOBAL_CONTEXT['app'].config.get("SAMPLE_CLAIM_CONTENT", " ** sample claim ** ")
 
+
 def generate_id():
 
     return str(uuid.uuid4())
+
 
 def insert_users_in_db(app, db):
 
@@ -112,7 +115,34 @@ def insert_users_in_db(app, db):
                 db.session.rollback()
                 logging.info(exc)
             else:
-                logging.warning(" name:{}, pwd_:{}, email_:{}, role:{}, cost:{}".format( name, pwd_, email_, role, cost))
+                logging.warning(" name:{}, pwd_:{}, email_:{}, role:{}, cost:{}".format(name, pwd_, email_, role, cost))
+
+
+def fix_slugify_categoriy_in_tasks(app, db):
+
+    import re
+
+    def slugify(text):
+        try:
+            import unidecode # pylint: disable=import-error
+            text = unidecode.unidecode(text).lower()
+        except ModuleNotFoundError:
+            text = text.lower()
+        return re.sub(r'[\W_]+', '-', text)
+
+    with app.app_context():
+
+        for t in db.session.query(Task).all():
+            try:
+                if t.category:
+                    category_s = slugify(t.category)
+                    logging.warning("t:'{}' t.category:{}, category_s:{}".format(t.name, t.category, category_s))
+                    t.category = category_s
+                db.session.commit()
+            except Exception as exc:
+                db.session.rollback()
+                logging.warning(exc)
+
 
 def fix_missing_number_in_tasks(app, db):
 
@@ -220,12 +250,12 @@ followings = sqlalchemy_db_.Table('followings',
                                   sqlalchemy_db_.Column('task_id', sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('task.id'), primary_key=True))
 
 claimings = sqlalchemy_db_.Table('claimings',
-                                  sqlalchemy_db_.Column(
-                                      'user_id',
-                                      sqlalchemy_db_.Unicode,
-                                      sqlalchemy_db_.ForeignKey('user.id'),
-                                      primary_key=True),
-                                  sqlalchemy_db_.Column('claim_id', sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('claim.id'), primary_key=True))
+                                 sqlalchemy_db_.Column(
+                                     'user_id',
+                                     sqlalchemy_db_.Unicode,
+                                     sqlalchemy_db_.ForeignKey('user.id'),
+                                     primary_key=True),
+                                 sqlalchemy_db_.Column('claim_id', sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('claim.id'), primary_key=True))
 
 
 class BaseModel(object):                         # pylint: disable=too-few-public-methods
@@ -434,6 +464,9 @@ class ItemBase(NamedModel):     # pylint: disable=too-few-public-methods
     status = db.Column(db.Unicode(16), default='new')
     priority = db.Column(db.Unicode(16), default='low')
 
+    # ~ to be overridden by inheriting class
+    attachments = []
+
     @property
     def formatted_attach_names(self):
         ret = [Markup(a.name) for a in self.attachments]
@@ -477,16 +510,17 @@ class Claim(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-me
 
     content = db.Column(db.Unicode(5 * 1024), default=get_default_claim_content)
 
-    contact = db.Column(db.Unicode()) #: (mail)
+    contact = db.Column(db.Unicode())  # : (mail)
     machine_model = db.Column(db.Unicode(64))
     serial_number = db.Column(db.Unicode(64))
     installation_date = db.Column(db.DateTime, default=datetime.utcnow)
     installation_place = db.Column(db.Unicode(64))
-    damaged_group = db.Column(db.Unicode(64)) # (menù tendina: gruppo colorante, gruppo base, EV colorante, EV base, Autocap, umidificatore, parti elettroniche, altre parti meccaniche)
-    quantity = db.Column(db.Integer) # 
-    serial_number_of_damaged_part = db.Column(db.Unicode(64)) # 
-    the_part_have_been_requested = db.Column(db.Boolean) #  (menù tendina: si, no)
-    is_covered_by_warranty = db.Column(db.Boolean) #   (menù tendina: si, no)
+    # (menù tendina: gruppo colorante, gruppo base, EV colorante, EV base, Autocap, umidificatore, parti elettroniche, altre parti meccaniche)
+    damaged_group = db.Column(db.Unicode(64))
+    quantity = db.Column(db.Integer)
+    serial_number_of_damaged_part = db.Column(db.Unicode(64))
+    the_part_have_been_requested = db.Column(db.Boolean)  # (menù tendina: si, no)
+    is_covered_by_warranty = db.Column(db.Boolean)  # (menù tendina: si, no)
 
     customer_id = db.Column(db.Unicode, db.ForeignKey('customer.id'))
     owner_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
