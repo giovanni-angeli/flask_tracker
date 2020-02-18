@@ -139,7 +139,8 @@ class EMailClient(object):    # pylint: disable=too-many-instance-attributes
             msg = email.mime.multipart.MIMEMultipart()
             msg['To'] = dest
             msg['Subject'] = msg_subject
-            msg['From'] = self.user
+            # ~ msg['From'] = self.user
+            msg['From'] = "FlaskTrack"
 
             if msg_body:
                 body = email.mime.text.MIMEText(msg_body)
