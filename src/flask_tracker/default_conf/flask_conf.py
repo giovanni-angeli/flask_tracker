@@ -162,31 +162,41 @@ ITEM_STATUSES = [
     ('closed', 'Closed'),
     ('invalid', 'Invalid')]
 
-ROLES_CAPABILITIES_MAP = {
-    'admin': {'default': '*'},
+
+ROLE_CAPABILITY_MAP = {
+    'admin': {
+        'default': '*',
+    },
     'administrative_manager': {
         'default': '',
-        'user': '*',
-        'task': '*',
-        'project': '',
-        'milestone': '*',
-        'order': '*',
-        'customer': '*',
-        'work_time': '*',
-        'order': '*',
-        'attachment': '*',
+        # ~ 'user': 'r',
+        'task': 'r',
+        'project': 'r',
+        'milestone': 'r',
+        'customer': 'r',
+        'history': 'r',
+        'work_time': 'r',
+        'order': 'r',
+        'attachment': 'r',
+        'claim': 'r',
     },
     'tech_manager': {
         'default': '',
-        'user': '',
-        'task': '*',
+        'user': 'r',
+        'task': 'rce',
         'project': '*',
         'milestone': '*',
-        'order': '',
+        'history': 'r',
         'customer': '',
         'work_time': '*',
         'order': '*',
         'attachment': '*',
+        'claim': 'rce',
+    },
+    'service': {
+        'default': '',
+        'attachment': '*',
+        'claim': '*',
     },
     'guest': {'default': 'r'},
     'suspended': {'default': ''}, }

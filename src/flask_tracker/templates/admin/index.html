@@ -149,29 +149,30 @@
                 </form>
             </div>
             <div class="col-sm-4 table-responsive">
+				{% if can_add_task_and_worktime %}
+					<label for="add_task_button"> Add a New task </label>
+					<div>
+						<button name="add_task_button" class="form-control btn-primary" onclick="window.open('/task/new/');"> New Task </button>
+					</div>
 
-                <label for="add_task_button"> Add a New task </label>
-                <div>
-                    <button name="add_task_button" class="form-control btn-primary" onclick="window.open('/task/new/');"> New Task </button>
-                </div>
+					<hr></hr>
+					<hr></hr>
 
-                <hr></hr>
-                <hr></hr>
-
-                <label for="add_work_hrs_form"> Add Working Hours </label>
-                <form name="add_work_hrs_form" action="/add_a_working_time_slot" method='GET' id="add_work_hrs_form">
-                <label for="selected_task"> Task (tasks in progress, assigned to you): </label>
-                    <select class="form-control" name="selected_task" id="selected_task">
-                        {% for t in assigned_task_names %}
-                        <option name="{{ t }}">{{ t }}</option>
-                        {% endfor %}
-                    </select>
-                    <label for="hours_to_add"> hours: </label>
-                    <input class="form-control" name="hours_to_add" id="hours_to_add" type="number" step="0.5" value="0"></input>
-                    <label for="date"> date: </label>
-                    <input class="form-control" name="date" type="date" value="" id="input_date"></input>
-                    <button class="form-control btn-primary" type="submit" onclick="add_hours_btn_clicked();">Add Hours</button>
-                </form>
+					<label for="add_work_hrs_form"> Add Working Hours </label>
+					<form name="add_work_hrs_form" action="/add_a_working_time_slot" method='GET' id="add_work_hrs_form">
+					<label for="selected_task"> Task (tasks in progress, assigned to you): </label>
+						<select class="form-control" name="selected_task" id="selected_task">
+							{% for t in assigned_task_names %}
+							<option name="{{ t }}">{{ t }}</option>
+							{% endfor %}
+						</select>
+						<label for="hours_to_add"> hours: </label>
+						<input class="form-control" name="hours_to_add" id="hours_to_add" type="number" step="0.5" value="0"></input>
+						<label for="date"> date: </label>
+						<input class="form-control" name="date" type="date" value="" id="input_date"></input>
+						<button class="form-control btn-primary" type="submit" onclick="add_hours_btn_clicked();">Add Hours</button>
+					</form>
+				{% endif %}
 
             </div>
         </div>

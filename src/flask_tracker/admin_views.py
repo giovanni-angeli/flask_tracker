@@ -21,7 +21,7 @@ from datetime import datetime, timezone, timedelta
 import markdown  # pylint: disable=import-error
 from werkzeug import secure_filename  # pylint: disable=import-error, no-name-in-module
 from jinja2 import contextfunction   # pylint: disable=import-error
-from flask import Markup  # pylint: disable=import-error
+from flask import Markup, flash  # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
 import flask_login  # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
@@ -29,6 +29,13 @@ from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-
 
 from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT)
 
+def has_capabilities(app, user, table_name, operation='*'):
+
+    role = user.role
+    cap_map = app.config.get('ROLE_CAPABILITY_MAP', {})
+    default_cap = cap_map.get(role, {}).get('default')
+    cap = cap_map.get(role, {}).get(table_name, default_cap)
+    return cap is not None and (operation in cap or cap == '*')
 
 def send_a_mail(email_client, msg_recipients, msg_subject, msg_body):
 
@@ -170,38 +177,34 @@ def define_view_classes(current_app):
             'date_modified': display_time_to_local_tz,
         }
 
-        @staticmethod
-        def has_capabilities(user, table_name, operation='*'):
-
-            role = user.role
-            capabilitie_map = current_app.config.get('ROLE_CAPABILITIE_MAP', {})
-            default_cap = capabilitie_map.get(role, {}).get('default')
-            cap = capabilitie_map.get(role, {}).get(table_name, default_cap)
-
-            # ~ logging.warning("role:{}, table_name:{}, operation:{}, cap:{}".format(role, table_name, operation, cap))
-
-            return cap is not None and operation in cap
-
         def is_accessible(self):
 
             ret = False
             if flask_login.current_user.is_authenticated:
-                if self.has_capabilities(flask_login.current_user, self.model.__tablename__):
+
+                self.can_edit = has_capabilities(current_app, flask_login.current_user, self.model.__tablename__, operation='e')
+                self.can_create = has_capabilities(current_app, flask_login.current_user, self.model.__tablename__, operation='c')
+                self.can_delete = has_capabilities(current_app, flask_login.current_user, self.model.__tablename__, operation='d')
+
+                if has_capabilities(current_app, flask_login.current_user, self.model.__tablename__, operation='r'):
                     ret = True
             return ret
 
         def on_model_change(self, form_, obj, is_created):
+
+            if is_created:
+                if not has_capabilities(current_app, flask_login.current_user, self.model.__tablename__, operation='c'):
+                    raise validators.ValidationError('permission denied on create')
+            else:
+                if not has_capabilities(current_app, flask_login.current_user, self.model.__tablename__, operation='e'):
+                    raise validators.ValidationError('permission denied on edit')
+
             obj.date_modified = datetime.utcnow()
             ret = super(TrackerModelView, self).on_model_change(form_, obj, is_created)
             return ret
 
-        # ~ def update_model(self, form_, obj):
-            # ~ return super().update_model(form_, obj)
 
     class WorkTimeView(TrackerModelView):  # pylint: disable=unused-variable
-
-        can_delete = current_app.config.get('CAN_DELETE_WORKTIME', True)
-        can_edit = current_app.config.get('CAN_EDIT_WORKTIME', True)
 
         column_editable_list = (
             'duration',
@@ -372,8 +375,8 @@ def define_view_classes(current_app):
 
     class UserView(TrackerModelView):     # pylint: disable=unused-variable
 
-        can_create = False
-        can_delete = False
+        # ~ can_create = False
+        # ~ can_delete = False
 
         column_labels = dict(followed='Followed Tasks')
 
@@ -387,7 +390,7 @@ def define_view_classes(current_app):
         }
 
         form_choices = {
-            'role': [(k, k) for k in current_app.config.get('ROLE_CAPABILITIE_MAP', {})],
+            'role': [(k, k) for k in current_app.config.get('ROLE_CAPABILITY_MAP', {})],
         }
 
         column_list = (
@@ -520,7 +523,7 @@ def define_view_classes(current_app):
 
     class ClaimView(ItemViewBase):     # pylint: disable=unused-variable
 
-        can_delete = current_app.config.get('CAN_DELETE_CLAIM', True)
+        # ~ can_delete = current_app.config.get('CAN_DELETE_CLAIM', True)
 
         column_filters = (
             'name',
@@ -778,9 +781,9 @@ def define_view_classes(current_app):
 
     class HistoryView(TrackerModelView):     # pylint: disable=unused-variable
 
-        can_create = False
-        can_delete = False
-        can_edit = False
+        # ~ can_create = False
+        # ~ can_delete = False
+        # ~ can_edit = False
 
         column_labels = dict(user='Author', description="modifications", date_created="Date")
 

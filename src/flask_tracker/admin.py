@@ -42,7 +42,7 @@ from flask_tracker.models import (
     MODELS_GLOBAL_CONTEXT,
     get_package_version)
 
-from flask_tracker.admin_views import define_view_classes
+from flask_tracker.admin_views import define_view_classes, has_capabilities
 
 
 def get_start_of_week():
@@ -171,6 +171,9 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         user_names = sorted([o.name for o in session.query(User).limit(50)])
         category_names = sorted([n[0] for n in TASK_CATEGORIES])
         department_names = sorted([n[0] for n in DEPARTMENTS])
+        
+        can_add_task_and_worktime = has_capabilities(current_app, flask_login.current_user, 'task', operation='c')
+        can_add_task_and_worktime = can_add_task_and_worktime and has_capabilities(current_app, flask_login.current_user, 'worktime', operation='c')
 
         t_ = datetime.now().date().isocalendar()
         week = "{:4d}-W{:02d}".format(t_[0], t_[1])
@@ -189,6 +192,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             'task_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(task_filtered_views)],
             'worktime_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(worktime_filtered_views)],
             'supervisor_web_port': current_app.config.get('SUPERVISOR_WEB_PORT', 0),
+            'can_add_task_and_worktime': can_add_task_and_worktime,
         }
         # ~ logging.warning("dt:{}".format(time.time() - t0))
 
