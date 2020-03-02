@@ -544,6 +544,8 @@ def define_view_classes(current_app):
             'serial_number',
             'installation_date',
             'installation_place',
+            'date_created',
+            'date_modified',
         )
 
         form_args = {
@@ -601,7 +603,8 @@ def define_view_classes(current_app):
             'status',
             'customer',
             'priority',
-            # ~ 'date_created',
+            'date_created',
+            'date_modified',
             # ~ 'followers',
             'machine_model',
             'serial_number',
@@ -617,7 +620,6 @@ def define_view_classes(current_app):
             'status',
             'priority',
             'customer',
-            'followers',
             'attachments',
             'content',
             'contact',
@@ -628,8 +630,6 @@ def define_view_classes(current_app):
             'quantity',
             'damaged_group',
             'serial_number_of_damaged_part',
-            'customer',
-            'owner',
             'the_part_have_been_requested',
             'is_covered_by_warranty',
             # ~ 'modifications',

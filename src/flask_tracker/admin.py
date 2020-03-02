@@ -128,72 +128,82 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
 
         # ~ t0 = time.time()
 
-        if flask_login.current_user.role == 'service':
-            self._template = "/admin/index_service.html"
-        else:
-            self._template = "/admin/index.html"
-
         session = MODELS_GLOBAL_CONTEXT['session']
 
-        start_of_the_month = get_start_of_month()
-        user_name = flask_login.current_user.name
+        if flask_login.current_user.role == 'service':
+            self._template = "/admin/index_service.html"  # pylint: disable=attribute-defined-outside-init
 
-        MAX_OPEN_TASK_PER_USER = current_app.config.get('MAX_OPEN_TASK_PER_USER', 20)
-        TASK_CATEGORIES = current_app.config.get('TASK_CATEGORIES', [])
-        DEPARTMENTS = current_app.config.get('DEPARTMENTS', [])
+            claim_filtered_views = [
+                ('open claims', compile_filtered_url('claim', [('status', 'equals', 'open')])),
+                ('claims not closed nor invalid', compile_filtered_url(
+                    'claim', [('status', 'not_in_list', ('closed', 'invalid'))])),
+            ]
 
-        # ~ logging.warning("TASK_CATEGORIES:{}".format(TASK_CATEGORIES))
+            ctx = {
+                'supervisor_web_port': current_app.config.get('SUPERVISOR_WEB_PORT', 0),
+                'claim_filtered_views': claim_filtered_views,
+            }
 
-        assigned_task_names = ["{}::{}".format(t.name, t.description or "")[:64] for t in session.query(Task).filter(Task.status == 'in_progress').filter(
-            Task.assignee_id == flask_login.current_user.id).limit(MAX_OPEN_TASK_PER_USER)]
+        else:
+            self._template = "/admin/index.html"   # pylint: disable=attribute-defined-outside-init
+            start_of_the_month = get_start_of_month()
+            user_name = flask_login.current_user.name
 
-        task_filtered_views = [
-            ('all open tasks', compile_filtered_url('task', [('status', 'equals', 'open')])),
-            ('all tasks in progress', compile_filtered_url('task', [('status', 'equals', 'in_progress')])),
-            ('all tasks followed by <b>{}</b>'.format(user_name),
-             compile_filtered_url('task', [('followers_user_name', 'contains', user_name)])),
-            ('tasks assigned to <b>{}</b> not closed nor invalid'.format(user_name),
-             compile_filtered_url('task', [('assignee_user_name', 'equals', user_name), ('status', 'not_in_list', ('closed', 'invalid'))])),
-            ('all tasks assigned to <b>{}</b>'.format(user_name),
-             compile_filtered_url('task', [('assignee_user_name', 'equals', user_name)])),
-        ]
+            MAX_OPEN_TASK_PER_USER = current_app.config.get('MAX_OPEN_TASK_PER_USER', 20)
+            TASK_CATEGORIES = current_app.config.get('TASK_CATEGORIES', [])
+            DEPARTMENTS = current_app.config.get('DEPARTMENTS', [])
 
-        worktime_filtered_views = [
-            ('hours worked by <b>{}</b>, in this month'.format(user_name),
-             compile_filtered_url('worktime', [('date', 'greater_than', start_of_the_month), ('user_user_name', 'equals', user_name)])),
-        ]
+            # ~ logging.warning("TASK_CATEGORIES:{}".format(TASK_CATEGORIES))
 
-        project_names = sorted([o.name for o in session.query(Project).limit(50)])
-        order_names = sorted([o.name for o in session.query(Order).limit(50) if o.in_progress])
-        milestone_names = sorted([o.name for o in session.query(Milestone).limit(50) if o.in_progress])
-        user_names = sorted([o.name for o in session.query(User).limit(50)])
-        category_names = sorted([n[0] for n in TASK_CATEGORIES])
-        department_names = sorted([n[0] for n in DEPARTMENTS])
+            assigned_task_names = ["{}::{}".format(t.name, t.description or "")[:64] for t in session.query(Task).filter(Task.status == 'in_progress').filter(
+                Task.assignee_id == flask_login.current_user.id).limit(MAX_OPEN_TASK_PER_USER)]
 
-        can_add_task_and_worktime = has_capabilities(current_app, flask_login.current_user, 'task', operation='c')
-        can_add_task_and_worktime = can_add_task_and_worktime and has_capabilities(
-            current_app, flask_login.current_user, 'worktime', operation='c')
+            task_filtered_views = [
+                ('all open tasks', compile_filtered_url('task', [('status', 'equals', 'open')])),
+                ('all tasks in progress', compile_filtered_url('task', [('status', 'equals', 'in_progress')])),
+                ('all tasks followed by <b>{}</b>'.format(user_name),
+                 compile_filtered_url('task', [('followers_user_name', 'contains', user_name)])),
+                ('tasks assigned to <b>{}</b> not closed nor invalid'.format(user_name),
+                 compile_filtered_url('task', [('assignee_user_name', 'equals', user_name), ('status', 'not_in_list', ('closed', 'invalid'))])),
+                ('all tasks assigned to <b>{}</b>'.format(user_name),
+                 compile_filtered_url('task', [('assignee_user_name', 'equals', user_name)])),
+            ]
 
-        t_ = datetime.now().date().isocalendar()
-        week = "{:4d}-W{:02d}".format(t_[0], t_[1])
+            worktime_filtered_views = [
+                ('hours worked by <b>{}</b>, in this month'.format(user_name),
+                 compile_filtered_url('worktime', [('date', 'greater_than', start_of_the_month), ('user_user_name', 'equals', user_name)])),
+            ]
 
-        ctx = {
-            'projects': project_names,
-            'orders': order_names,
-            'milestones': milestone_names,
-            'users': user_names,
-            'categories': category_names,
-            'departments': department_names,
-            'time': time.asctime(),
-            'week': week,
-            'version': get_package_version(),
-            'assigned_task_names': assigned_task_names,
-            'task_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(task_filtered_views)],
-            'worktime_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(worktime_filtered_views)],
-            'supervisor_web_port': current_app.config.get('SUPERVISOR_WEB_PORT', 0),
-            'can_add_task_and_worktime': can_add_task_and_worktime,
-        }
-        # ~ logging.warning("dt:{}".format(time.time() - t0))
+            project_names = sorted([o.name for o in session.query(Project).limit(50)])
+            order_names = sorted([o.name for o in session.query(Order).limit(50) if o.in_progress])
+            milestone_names = sorted([o.name for o in session.query(Milestone).limit(50) if o.in_progress])
+            user_names = sorted([o.name for o in session.query(User).limit(50)])
+            category_names = sorted([n[0] for n in TASK_CATEGORIES])
+            department_names = sorted([n[0] for n in DEPARTMENTS])
+
+            can_add_task_and_worktime = has_capabilities(current_app, flask_login.current_user, 'task', operation='c')
+            can_add_task_and_worktime = can_add_task_and_worktime and has_capabilities(
+                current_app, flask_login.current_user, 'worktime', operation='c')
+
+            t_ = datetime.now().date().isocalendar()
+            week = "{:4d}-W{:02d}".format(t_[0], t_[1])
+
+            ctx = {
+                'projects': project_names,
+                'orders': order_names,
+                'milestones': milestone_names,
+                'users': user_names,
+                'categories': category_names,
+                'departments': department_names,
+                'time': time.asctime(),
+                'week': week,
+                'version': get_package_version(),
+                'assigned_task_names': assigned_task_names,
+                'task_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(task_filtered_views)],
+                'worktime_filtered_views': [(Markup("{}. {}".format(i, view[0])), view[1]) for i, view in enumerate(worktime_filtered_views)],
+                'supervisor_web_port': current_app.config.get('SUPERVISOR_WEB_PORT', 0),
+                'can_add_task_and_worktime': can_add_task_and_worktime,
+            }
 
         return self.render(self._template, **ctx)
 
