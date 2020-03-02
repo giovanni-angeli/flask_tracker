@@ -18,11 +18,10 @@ from functools import wraps
 
 import markdown  # pylint: disable=import-error
 from werkzeug.security import check_password_hash  # pylint: disable=import-error
-from flask import (Markup, flash, url_for, redirect, request, current_app,
-                   send_from_directory)  # pylint: disable=import-error
+from flask import (Markup, url_for, redirect, request, current_app, send_from_directory)  # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
 
-from isoweek import Week
+from isoweek import Week          # pylint: disable=import-error
 
 import flask_login  # pylint: disable=import-error
 import flask_admin  # pylint: disable=import-error
@@ -128,7 +127,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
     def index(self, ):
 
         # ~ t0 = time.time()
-    
+
         if flask_login.current_user.role == 'service':
             self._template = "/admin/index_service.html"
         else:
@@ -136,7 +135,6 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
 
         session = MODELS_GLOBAL_CONTEXT['session']
 
-        start_of_the_week = get_start_of_week()
         start_of_the_month = get_start_of_month()
         user_name = flask_login.current_user.name
 
@@ -171,9 +169,10 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         user_names = sorted([o.name for o in session.query(User).limit(50)])
         category_names = sorted([n[0] for n in TASK_CATEGORIES])
         department_names = sorted([n[0] for n in DEPARTMENTS])
-        
+
         can_add_task_and_worktime = has_capabilities(current_app, flask_login.current_user, 'task', operation='c')
-        can_add_task_and_worktime = can_add_task_and_worktime and has_capabilities(current_app, flask_login.current_user, 'worktime', operation='c')
+        can_add_task_and_worktime = can_add_task_and_worktime and has_capabilities(
+            current_app, flask_login.current_user, 'worktime', operation='c')
 
         t_ = datetime.now().date().isocalendar()
         week = "{:4d}-W{:02d}".format(t_[0], t_[1])
@@ -316,11 +315,11 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         if model_name == 'task':
             filters += [(k, 'in_list', v) for k, v in request_args.items()]
         elif model_name == 'worktime':
-            def __(k): 
+            def __(k):
                 ret = "_".join(k.split('_')[1:]) if k != 'task' else k
                 logging.warning("k:{}, ret:{}".format(k, ret))
                 return ret
-            filters += [( __(k), 'in_list', v) for k, v in request_args.items()]
+            filters += [(__(k), 'in_list', v) for k, v in request_args.items()]
 
         url_ = compile_filtered_url(model_name, filters)
 
@@ -359,10 +358,9 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         # ~ /worktime/?flt1_user_user_name_equals=Giovanni%20A
         # ~ &flt2_date_between=2020-01-27+00%3A00%3A00+to+2020-02-03+23%3A59%3A59
         url_ = compile_filtered_url('worktime', [
-                ('date', 'between', '{}+00:00:00+to+{}+00:00:00'.format(t0, t1)),
-                ('user_user_name', 'equals', flask_login.current_user.name),
-            ]
-        )
+            ('date', 'between', '{}+00:00:00+to+{}+00:00:00'.format(t0, t1)),
+            ('user_user_name', 'equals', flask_login.current_user.name),
+        ])
         # ~ logging.warning("t0:{}, t1:{}".format(t0, t1))
         # ~ logging.warning("url_:{}".format(url_))
         return redirect(url_)

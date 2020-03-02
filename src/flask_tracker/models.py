@@ -13,12 +13,14 @@ import logging
 import traceback
 from datetime import datetime
 
+from sqlalchemy.inspection import inspect  # pylint: disable=import-error
+
 import iso8601                       # pylint: disable=import-error
 
 from flask import Markup  # pylint: disable=import-error
 from werkzeug.security import generate_password_hash  # pylint: disable=import-error
-from sqlalchemy.inspection import inspect  # pylint: disable=import-error
 import flask_sqlalchemy              # pylint: disable=import-error
+
 
 sqlalchemy_db_ = flask_sqlalchemy.SQLAlchemy()
 sqlalchemy_session_ = None
@@ -124,7 +126,7 @@ def fix_slugify_categoriy_in_tasks(app, db):
 
     def slugify(text):
         try:
-            import unidecode # pylint: disable=import-error
+            import unidecode  # pylint: disable=import-error
             text = unidecode.unidecode(text).lower()
         except ModuleNotFoundError:
             text = text.lower()

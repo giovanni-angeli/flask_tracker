@@ -21,13 +21,14 @@ from datetime import datetime, timezone, timedelta
 import markdown  # pylint: disable=import-error
 from werkzeug import secure_filename  # pylint: disable=import-error, no-name-in-module
 from jinja2 import contextfunction   # pylint: disable=import-error
-from flask import Markup, flash  # pylint: disable=import-error
+from flask import Markup   # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
 import flask_login  # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
 from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-error
 
 from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT)
+
 
 def has_capabilities(app, user, table_name, operation='*'):
 
@@ -36,6 +37,7 @@ def has_capabilities(app, user, table_name, operation='*'):
     default_cap = cap_map.get(role, {}).get('default')
     cap = cap_map.get(role, {}).get(table_name, default_cap)
     return cap is not None and (operation in cap or cap == '*')
+
 
 def send_a_mail(email_client, msg_recipients, msg_subject, msg_body):
 
@@ -182,9 +184,15 @@ def define_view_classes(current_app):
             ret = False
             if flask_login.current_user.is_authenticated:
 
-                self.can_edit = has_capabilities(current_app, flask_login.current_user, self.model.__tablename__, operation='e')
-                self.can_create = has_capabilities(current_app, flask_login.current_user, self.model.__tablename__, operation='c')
-                self.can_delete = has_capabilities(current_app, flask_login.current_user, self.model.__tablename__, operation='d')
+                self.can_edit = has_capabilities(           # pylint: disable=attribute-defined-outside-init
+                    current_app, flask_login.current_user,
+                    self.model.__tablename__, operation='e')
+                self.can_create = has_capabilities(         # pylint: disable=attribute-defined-outside-init
+                    current_app, flask_login.current_user,
+                    self.model.__tablename__, operation='c')
+                self.can_delete = has_capabilities(         # pylint: disable=attribute-defined-outside-init
+                    current_app, flask_login.current_user,
+                    self.model.__tablename__, operation='d')
 
                 if has_capabilities(current_app, flask_login.current_user, self.model.__tablename__, operation='r'):
                     ret = True
@@ -202,7 +210,6 @@ def define_view_classes(current_app):
             obj.date_modified = datetime.utcnow()
             ret = super(TrackerModelView, self).on_model_change(form_, obj, is_created)
             return ret
-
 
     class WorkTimeView(TrackerModelView):  # pylint: disable=unused-variable
 

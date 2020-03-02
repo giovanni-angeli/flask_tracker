@@ -9,10 +9,8 @@
 import os
 import sys
 import logging
-import traceback
-import time
 
-from flask import Flask, url_for  # pylint: disable=import-error
+from flask import Flask  # pylint: disable=import-error
 
 from flask_tracker.models import init_orm
 from flask_tracker.admin import init_admin
@@ -78,30 +76,32 @@ def initialize_instance():
 
     import shutil
     import glob
-    
+
     dst = sys.argv[1]
 
     for file in glob.glob(os.path.join(HERE, "default_conf", '*.*')):
         logging.warning("copying {} in {}".format(file, dst))
         shutil.copy(file, dst)
 
+
 def create_email_client(flask_app):
-    
-    email_client  = None
-    
+
+    email_client = None
+
     EMAIL_CREDENTIALS_PATH = flask_app.config.get('EMAIL_CREDENTIALS_PATH', '----')
     IMAP_HOST_PORT = flask_app.config.get('IMAP_HOST_PORT')
     SMTP_HOST_PORT = flask_app.config.get('SMTP_HOST_PORT')
     CHECK_EMAIL_TIME_STEP = flask_app.config.get('CHECK_EMAIL_TIME_STEP', 60)
     if (os.path.exists(EMAIL_CREDENTIALS_PATH) and IMAP_HOST_PORT and SMTP_HOST_PORT):
-        email_client = EMailClient(path_to_credentials=EMAIL_CREDENTIALS_PATH, 
-                imap_host_port=IMAP_HOST_PORT, 
-                smtp_host_port=SMTP_HOST_PORT,
-                time_step=CHECK_EMAIL_TIME_STEP)
+        email_client = EMailClient(path_to_credentials=EMAIL_CREDENTIALS_PATH,
+                                   imap_host_port=IMAP_HOST_PORT,
+                                   smtp_host_port=SMTP_HOST_PORT,
+                                   time_step=CHECK_EMAIL_TIME_STEP)
 
     setattr(flask_app, 'email_client_tracker', email_client)
 
-    return email_client 
+    return email_client
+
 
 def main():
 
@@ -110,8 +110,8 @@ def main():
     HOST = flask_app.config.get('HOST')
     PORT = flask_app.config.get('PORT')
 
-    from waitress.server import create_server
-    from waitress.wasyncore import poll2
+    from waitress.server import create_server     # pylint: disable=import-error
+    from waitress.wasyncore import poll2          # pylint: disable=import-error
 
     server = create_server(flask_app, host=HOST, port=PORT)
     logging.warning("server:{} serving {} on http://{}:{}".format(server, flask_app, HOST, PORT))
@@ -122,17 +122,16 @@ def main():
     try:
 
         timeout = 5.0
-        last_email_check = 0
-        while server._map:
-            poll2(timeout, server._map)
-            if (email_client):
+        while server._map:                  # pylint: disable=protected-access
+            poll2(timeout, server._map)     # pylint: disable=protected-access
+            if email_client:
                 email_client.poll()
     except (SystemExit, KeyboardInterrupt):
 
         server.close()
-        if (email_client):
+        if email_client:
             email_client.close()
-    
+
 
 if __name__ == '__main__':
 
