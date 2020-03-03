@@ -183,7 +183,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
 
             can_add_task_and_worktime = has_capabilities(current_app, flask_login.current_user, 'task', operation='c')
             can_add_task_and_worktime = can_add_task_and_worktime and has_capabilities(
-                current_app, flask_login.current_user, 'worktime', operation='c')
+                current_app, flask_login.current_user, 'work_time', operation='c')
 
             t_ = datetime.now().date().isocalendar()
             week = "{:4d}-W{:02d}".format(t_[0], t_[1])
