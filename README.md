@@ -76,6 +76,6 @@ login as:
 
     admin, admin
 
-## graph of the db schema:
+## graph of the db schema (v7):
 
 <img src="/doc/tracker.v7.sqlite.svg" alt="db schema" style="width: 640px;"/>
