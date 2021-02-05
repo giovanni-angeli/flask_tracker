@@ -1,9 +1,5 @@
 # flask_tracker
 
-Copyright (c) 2019 2020 giovanni.angeli6@gmail.com
-
-'Development Status :: 2 - Pre-Alpha'
-
 a **very** simplified activity-tracker based on [Flask Admin](https://flask-admin.readthedocs.io).
 
 **flask_tracker** is a variation on the theme of activity trackers (Trac, Redmine, Assembla, Trello, ...), based on a home-made approach in order to get:
@@ -31,6 +27,10 @@ ___________________________
 For the built-in wiki, **flask_tracker** integrates code cloned from the project [alexanderjulo/wiki](https://github.com/alexanderjulo/wiki)
 
 ___________________________
+
+Copyright (c) 2019 2020 giovanni.angeli6@gmail.com
+
+'Development Status :: 2 - Pre-Alpha'
 
 ### Overview.
 
