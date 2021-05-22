@@ -1,6 +1,6 @@
 # flask_tracker
 
-a **very** simplified activity-tracker based on [Flask Admin](https://flask-admin.readthedocs.io).
+a **very** simplified system for monitoring the activities of a work team, based on [Flask Admin](https://flask-admin.readthedocs.io).
 
 **flask_tracker** is a variation on the theme of activity trackers (Trac, Redmine, Assembla, Trello, ...), based on a home-made approach in order to get:
 
@@ -13,7 +13,7 @@ It is not aimed to be:
   * a full-optional team-management-tool for large companies
   * a full-fledged, full-optional spaceship
 
-It is buitl using (see INSTALL_REQUIRES in setup.py fpr a complete dependency list):
+It is buitl using (see INSTALL_REQUIRES in setup.py for a complete dependency list):
 
     'flask',
     'flask_admin',
@@ -28,7 +28,7 @@ For the built-in wiki, **flask_tracker** integrates code cloned from the project
 
 ___________________________
 
-Copyright (c) 2019 2020 giovanni.angeli6@gmail.com
+Copyright (c) 2019 2021 giovanni.angeli6@gmail.com
 
 'Development Status :: 2 - Pre-Alpha'
 
