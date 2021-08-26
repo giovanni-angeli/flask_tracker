@@ -243,21 +243,31 @@ def reset_db(app, db):
         db.session.commit()
 
 
-followings = sqlalchemy_db_.Table('followings',
-                                  sqlalchemy_db_.Column(
-                                      'user_id',
-                                      sqlalchemy_db_.Unicode,
-                                      sqlalchemy_db_.ForeignKey('user.id'),
-                                      primary_key=True),
-                                  sqlalchemy_db_.Column('task_id', sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('task.id'), primary_key=True))
+followings = sqlalchemy_db_.Table(
+    'followings',
+    sqlalchemy_db_.Column(
+        'user_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('user.id'),
+        primary_key=True),
+    sqlalchemy_db_.Column(
+        'task_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('task.id'),
+        primary_key=True))
 
-claimings = sqlalchemy_db_.Table('claimings',
-                                 sqlalchemy_db_.Column(
-                                     'user_id',
-                                     sqlalchemy_db_.Unicode,
-                                     sqlalchemy_db_.ForeignKey('user.id'),
-                                     primary_key=True),
-                                 sqlalchemy_db_.Column('claim_id', sqlalchemy_db_.Unicode, sqlalchemy_db_.ForeignKey('claim.id'), primary_key=True))
+claimings = sqlalchemy_db_.Table(
+    'claimings',
+    sqlalchemy_db_.Column(
+        'user_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('user.id'),
+        primary_key=True),
+    sqlalchemy_db_.Column(
+        'claim_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('claim.id'),
+        primary_key=True))
 
 
 class BaseModel(object):                         # pylint: disable=too-few-public-methods
@@ -270,7 +280,7 @@ class BaseModel(object):                         # pylint: disable=too-few-publi
     date_modified = db.Column(db.DateTime, default=datetime.utcnow)
 
     id = db.Column(db.Unicode, primary_key=True, nullable=False, default=generate_id)
-    description = db.Column(db.Unicode(200))
+    description = db.Column(db.Unicode())
 
     query = None
 
@@ -354,6 +364,7 @@ class Customer(NamedModel, sqlalchemy_Model):   # pylint: disable=too-few-public
     db = MODELS_GLOBAL_CONTEXT['db']
     orders = db.relationship('Order', backref='customer')
     claims = db.relationship('Claim', backref='customer')
+    improvements = db.relationship('Improvement', backref='customer')
 
 
 class Order(NamedModel, sqlalchemy_Model):    # pylint: disable=too-few-public-methods
@@ -408,12 +419,19 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     email = db.Column(db.Unicode(64))
     password = db.Column(db.Unicode(128))
     role = db.Column(db.Unicode(32), default='guest')
-    worktimes = db.relationship('WorkTime', backref='user')
-    assigned_tasks = db.relationship('Task', backref='assignee')
-    assigned_claims = db.relationship('Claim', backref='owner')
     cost_per_hour = db.Column(db.Float, default=0.00, doc='cost per hour in arbitrary unit')
 
+    worktimes = db.relationship('WorkTime', backref='user')
+
+    assigned_tasks = db.relationship('Task', backref='assignee')
+
+    assigned_claims = db.relationship('Claim', backref='owner')
+
     modifications = db.relationship('History', backref='user')
+
+    authored_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.author_id")
+    assigned_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.assignee_id")
+    notified_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.notifier_id")
 
     @property
     def login(self):
@@ -457,6 +475,8 @@ class History(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-public
 
 class ItemBase(NamedModel):     # pylint: disable=too-few-public-methods
 
+    content_max_len = 5 * 1024
+
     db = MODELS_GLOBAL_CONTEXT['db']
 
     name = db.Column(db.Unicode(64), nullable=False)
@@ -485,7 +505,7 @@ class Task(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-met
 
     id = db.Column(db.Unicode, primary_key=True, nullable=False, default=generate_id)
 
-    content = db.Column(db.Unicode(5 * 1024), default=get_default_task_content)
+    content = db.Column(db.Unicode(ItemBase.content_max_len), default=get_default_task_content)
 
     category = db.Column(db.Unicode(16), default='')
     planned_time = db.Column(db.Float, default=0.00, doc='hours')
@@ -530,6 +550,31 @@ class Claim(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-me
     attachments = db.relationship('Attachment', backref='claimed')
     modifications = db.relationship('History', backref='claim')
     followers = db.relationship('User', secondary=claimings, backref='claimed')
+
+
+class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
+
+    row_count_limt = 1000
+
+    db = MODELS_GLOBAL_CONTEXT['db']
+
+    machine_model = db.Column(db.Unicode(64))
+    due_date = db.Column(db.DateTime)
+    category = db.Column(db.Unicode(), default='')
+    assembly_subgroup = db.Column(db.Unicode(), default='')
+    component = db.Column(db.Unicode(), default='')
+    market_potential = db.Column(db.Unicode(), default='')
+
+    content = db.Column(db.Unicode(5 * 1024), default='')
+    estimated_resources = db.Column(db.Unicode(), default='')
+    estimated_time_steps = db.Column(db.Unicode(), default='')
+    notes = db.Column(db.Unicode(), default='')
+
+    customer_id = db.Column(db.Unicode, db.ForeignKey('customer.id'))
+
+    author_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
+    assignee_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
+    notifier_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
 
 
 def do_delete_pending_objects(session, flush_context, instances=None):  # pylint: disable=unused-argument

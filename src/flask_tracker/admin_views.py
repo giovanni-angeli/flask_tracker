@@ -7,6 +7,7 @@
 # pylint: disable=too-many-arguments
 # pylint: disable=too-many-locals
 # pylint: disable=broad-except
+# pylint: disable=too-many-lines
 
 import os
 import sys
@@ -18,6 +19,9 @@ import difflib
 import urllib.parse
 from datetime import datetime, timezone, timedelta
 
+from multiprocessing import Process
+
+
 import markdown  # pylint: disable=import-error
 from werkzeug import secure_filename  # pylint: disable=import-error, no-name-in-module
 from jinja2 import contextfunction   # pylint: disable=import-error
@@ -27,7 +31,7 @@ import flask_login  # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
 from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-error
 
-from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT)
+from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT, ItemBase)
 
 
 def has_capabilities(app, user, table_name, operation='*'):
@@ -40,8 +44,6 @@ def has_capabilities(app, user, table_name, operation='*'):
 
 
 def send_a_mail(email_client, msg_recipients, msg_subject, msg_body):
-
-    from multiprocessing import Process
 
     def _do_send():
         t0 = time.time()
@@ -104,28 +106,33 @@ def _handle_item_modification(form_, item, current_app):     # pylint: disable=n
 
     if modifications:
 
-        session = MODELS_GLOBAL_CONTEXT['session']
         args = {
             '{}_id'.format(item.__tablename__): item_as_dict['id'],
             'user_id': flask_login.current_user.id,
             'description': json.dumps(modifications, indent=2)
         }
         logging.warning(json.dumps(args, indent=2))
-        session.add(History(**args))
 
-        msg_subject = "[FT Notify] - {}: {} modified".format(item.__tablename__, item.name)
-        msg_body = json.dumps({
-            item.__tablename__: item.name,
-            'user': flask_login.current_user.name,
-            'modifications': modifications
-        }, indent=2)
-        msg_recipients = [follower.email for follower in item.followers]
+        if hasattr(History, '{}_id'.format(item.__tablename__)):
 
-        email_client = getattr(current_app, 'email_client_tracker')
-        if email_client:
-            t0 = time.time()
-            send_a_mail(email_client, msg_recipients, msg_subject, msg_body)
-            logging.warning("pid:{}, dt:{}".format(os.getpid(), time.time() - t0))
+            session = MODELS_GLOBAL_CONTEXT['session']
+            session.add(History(**args))
+
+        if hasattr(item, 'followers') and item.followers:
+
+            msg_subject = "[FT Notify] - {}: {} modified".format(item.__tablename__, item.name)
+            msg_body = json.dumps({
+                item.__tablename__: item.name,
+                'user': flask_login.current_user.name,
+                'modifications': modifications
+            }, indent=2)
+            msg_recipients = [follower.email for follower in item.followers]
+
+            email_client = getattr(current_app, 'email_client_tracker')
+            if email_client:
+                t0 = time.time()
+                send_a_mail(email_client, msg_recipients, msg_subject, msg_body)
+                logging.warning("pid:{}, dt:{}".format(os.getpid(), time.time() - t0))
 
 
 def _display_tasks_as_links(cls, context, obj, name):   # pylint: disable=unused-argument
@@ -141,13 +148,13 @@ def _display_tasks_as_links(cls, context, obj, name):   # pylint: disable=unused
     return ret
 
 
-def define_view_classes(current_app):
+def define_view_classes(current_app):  # pylint: disable=too-many-statements
     """
     we define our ModelView classes inside a function, because
     we want an already initialized app to allow access to app.config.
     """
 
-    class TrackerModelView(ModelView):    # pylint: disable=unused-variable
+    class TrackerModelView(ModelView):    # pylint: disable=unused-variable, possibly-unused-variable
 
         named_filter_urls = True
 
@@ -168,15 +175,19 @@ def define_view_classes(current_app):
             'description',
         )
 
-        def display_time_to_local_tz(self, context, obj, name):   # pylint: disable=unused-argument,no-self-use
+        def _display_description(self, context, obj, name):   # pylint: disable=unused-argument,no-self-use
+            value = getattr(obj, name)
+            return Markup(value)
+
+        def _display_time_to_local_tz(self, context, obj, name):   # pylint: disable=unused-argument,no-self-use
             value = getattr(obj, name)
             value_ = value.replace(tzinfo=timezone.utc).astimezone().strftime("%d %b %Y (%I:%M:%S %p)")
-            # ~ logging.warning("obj:{}, name:{}, value:{}, value_:{}".format(obj, name, value, value_))
             return Markup(value_)
 
         column_formatters = {
-            'date_created': display_time_to_local_tz,
-            'date_modified': display_time_to_local_tz,
+            'date_created': _display_time_to_local_tz,
+            'date_modified': _display_time_to_local_tz,
+            'description': _display_description,
         }
 
         def is_accessible(self):
@@ -211,7 +222,7 @@ def define_view_classes(current_app):
             ret = super(TrackerModelView, self).on_model_change(form_, obj, is_created)
             return ret
 
-    class WorkTimeView(TrackerModelView):  # pylint: disable=unused-variable
+    class WorkTimeView(TrackerModelView):  # pylint: disable=unused-variable, possibly-unused-variable
 
         column_editable_list = (
             'duration',
@@ -302,7 +313,7 @@ def define_view_classes(current_app):
             ret = super(WorkTimeView, self).on_model_change(form, obj, is_created)
             return ret
 
-    class OrderView(TrackerModelView):    # pylint: disable=unused-variable
+    class OrderView(TrackerModelView):    # pylint: disable=unused-variable, possibly-unused-variable
 
         column_editable_list = (
             'customer',
@@ -324,7 +335,7 @@ def define_view_classes(current_app):
             'tasks': _display_tasks_as_links,
         })
 
-    class MilestoneView(TrackerModelView):   # pylint: disable=unused-variable
+    class MilestoneView(TrackerModelView):   # pylint: disable=unused-variable, possibly-unused-variable
 
         column_editable_list = (
             # ~ 'project',
@@ -368,7 +379,7 @@ def define_view_classes(current_app):
 
             return form_
 
-    class ProjectView(TrackerModelView):      # pylint: disable=unused-variable
+    class ProjectView(TrackerModelView):      # pylint: disable=unused-variable, possibly-unused-variable
 
         column_editable_list = (
             # ~ 'milestones',
@@ -380,7 +391,7 @@ def define_view_classes(current_app):
             'description',
         )
 
-    class UserView(TrackerModelView):     # pylint: disable=unused-variable
+    class UserView(TrackerModelView):     # pylint: disable=unused-variable, possibly-unused-variable
 
         # ~ can_create = False
         # ~ can_delete = False
@@ -446,7 +457,7 @@ def define_view_classes(current_app):
 
         column_labels = dict(worktimes='Worked Hours in This Week')
 
-    class ItemViewBase(TrackerModelView):     # pylint: disable=unused-variable
+    class ItemViewBase(TrackerModelView):     # pylint: disable=unused-variable, possibly-unused-variable
 
         def get_edit_form(self):
 
@@ -459,9 +470,11 @@ def define_view_classes(current_app):
             cnt_description = Markup(
                 'NOTE: you can use <a target="blank_" href="https://daringfireball.net/projects/markdown/syntax">Markdown syntax</a>. Use preview button to see what you get.')
 
-            form_.content = fields.TextAreaField('content', [validators.optional(), validators.length(max=5 * 1000)],
-                                                 description=cnt_description,
-                                                 render_kw={"style": "background:#fff; border:dashed #DD3333 1px; height:480px;"})
+            form_.content = fields.TextAreaField(
+                'content', [
+                    validators.optional(), validators.length(
+                        max=ItemBase.content_max_len)], description=cnt_description, render_kw={
+                            "style": "background:#fff; border:dashed #DD3333 1px; height:480px;"})
 
             form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={})
 
@@ -469,6 +482,7 @@ def define_view_classes(current_app):
 
         @contextfunction
         def get_detail_value(self, context, model, name):
+
             ret = super().get_detail_value(context, model, name)
             if name == 'content':
                 ret = markdown.markdown(ret)
@@ -510,6 +524,12 @@ def define_view_classes(current_app):
 
             return ret
 
+        def display_content(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
+            value = getattr(obj, name)
+            value = markdown.markdown(value)
+            value = Markup(value)
+            return value
+
         def display_id_short(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
             # ~ logging.warning("obj({}):{}".format(type(obj), obj))
             # ~ logging.warning("dir(obj):{}".format(dir(obj)))
@@ -526,9 +546,10 @@ def define_view_classes(current_app):
         column_formatters = TrackerModelView.column_formatters.copy()
         column_formatters.update({
             'id_short': display_id_short,
+            'content': display_content,
         })
 
-    class ClaimView(ItemViewBase):     # pylint: disable=unused-variable
+    class ClaimView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
 
         # ~ can_delete = current_app.config.get('CAN_DELETE_CLAIM', True)
 
@@ -636,7 +657,7 @@ def define_view_classes(current_app):
             'followers',
         )
 
-    class TaskView(ItemViewBase):     # pylint: disable=unused-variable
+    class TaskView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
 
         column_sortable_list = (
             'name',
@@ -786,7 +807,64 @@ def define_view_classes(current_app):
             'worktimes': display_worktimes,
         })
 
-    class HistoryView(TrackerModelView):     # pylint: disable=unused-variable
+    class ImprovementView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
+
+        column_filters = (
+            'name',
+            'status',
+            'date_created',
+            'description',
+            'customer.name',
+            'machine_model',
+            'date_modified',
+        )
+
+        form_choices = {
+            'machine_model': current_app.config.get('CLAIM_MACHINE_MODELS'),
+            'status': current_app.config.get('ITEM_STATUSES'),
+            'priority': current_app.config.get('ITEM_PRIORITIES'),
+            'market_potential': current_app.config.get('IMPROVEMENT_MARKET_POTENTIAL', [
+                (0, 'minimal'),
+                (1, 'low'),
+                (2, 'medium'),
+                (4, 'high'),
+                (5, 'maximal')
+            ]),
+            'category': current_app.config.get('IMPROVEMENT_CATEGORIES', [
+                (0, 'Funzionalità'),
+                (1, 'Affidabilità'),
+                (2, 'Economia'),
+                (3, 'Assemblaggio'),
+                (4, 'Manutenzione'),
+                (5, 'Qualità'),
+                (6, 'Ergonomia'),
+                (7, 'Sicurezza'),
+                (8, 'Trasporto'),
+                (9, 'Diagnostica'),
+                (10, 'Estetica'),
+                (11, 'Modularità'),
+                (12, 'Collaudo'),
+            ]),
+            'assembly_subgroup': current_app.config.get('IMPROVEMENT_ASSEMBLY_SUBGROUPS', [
+                (0, 'valvola 3 vie 2 posizioni DN4/6'),
+                (1, 'pompa 0.2LT'),
+                (2, 'pompa 0.5LT '),
+                (3, 'pompa 1.5LT '),
+                (4, 'pompa 3LT '),
+                (5, 'valvola ceramica Thor'),
+            ]),
+        }
+
+        form_excluded_columns = (
+            # ~ 'status',
+        )
+
+        column_editable_list = (
+            'status',
+            'category',
+        )
+
+    class HistoryView(TrackerModelView):     # pylint: disable=unused-variable, possibly-unused-variable
 
         # ~ can_create = False
         # ~ can_delete = False
@@ -863,7 +941,7 @@ def define_view_classes(current_app):
             'description': display_modifications,
         })
 
-    class AttachmentView(TrackerModelView):     # pylint: disable=unused-variable
+    class AttachmentView(TrackerModelView):     # pylint: disable=unused-variable, possibly-unused-variable
 
         form_args = {
             'attached': {
