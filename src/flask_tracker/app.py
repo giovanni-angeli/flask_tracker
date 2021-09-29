@@ -12,7 +12,8 @@ import logging
 
 from flask import Flask  # pylint: disable=import-error
 
-from flask_tracker.models import init_orm
+from flask_tracker.models import (init_orm, get_package_version)
+
 from flask_tracker.admin import init_admin
 
 from flask_tracker.email_client import EMailClient
@@ -26,7 +27,7 @@ STATIC_FOLDER = os.path.join(HERE, "static")
 
 def set_logging(log_level):
     fmt_ = logging.Formatter('[%(asctime)s]'
-                             '%(name)s:'
+                             # ~ '%(name)s:'
                              '%(levelname)s:'
                              '%(funcName)s() '
                              '%(filename)s:'
@@ -107,6 +108,8 @@ def main():
 
     flask_app = _init_app(sys.argv)
 
+    logging.warning("\n\tpackage version:{}\n".format(get_package_version()))
+
     HOST = flask_app.config.get('HOST')
     PORT = flask_app.config.get('PORT')
 
@@ -114,7 +117,7 @@ def main():
     from waitress.wasyncore import poll2          # pylint: disable=import-error
 
     server = create_server(flask_app, host=HOST, port=PORT)
-    logging.warning("server:{} serving {} on http://{}:{}".format(server, flask_app, HOST, PORT))
+    logging.warning("serving {} on http://{}:{}".format(flask_app, HOST, PORT))
 
     email_client = create_email_client(flask_app)
     logging.warning("email_client:{}".format(email_client))

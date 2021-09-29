@@ -99,11 +99,11 @@ class LoginForm(form.Form):
 
     def validate_login(self, field):
 
-        logging.warning("self.login.data:{}".format(self.login.data))
+        # ~ logging.warning("self.login.data:{}".format(self.login.data))
 
         user = self.get_user()
 
-        logging.warning("user:{}, field:{}".format(user, field))
+        # ~ logging.warning("user:{}, field:{}".format(user, field))
 
         if user is None:
             raise validators.ValidationError('Invalid user')
@@ -212,15 +212,12 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
     def login(self):
 
         form_ = LoginForm(request.form)
-
-        logging.warning("form_:{}".format(form_))
-
         if flask_admin.helpers.validate_form_on_submit(form_):
             user = form_.get_user()
             flask_login.login_user(user)
             logging.warning("user.name:{}".format(user.name))
 
-        logging.warning("login.current_user:{}".format(flask_login.current_user))
+            logging.warning("current_user:{}".format(flask_login.current_user))
 
         if flask_login.current_user.is_authenticated:
             return redirect(url_for('.index'))
@@ -231,6 +228,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
 
     @flask_admin.expose('/logout/')
     def logout(self):  # pylint: disable=no-self-use
+        logging.warning("current_user:{}".format(flask_login.current_user))
         flask_login.logout_user()
         return redirect(url_for('.index'))
 

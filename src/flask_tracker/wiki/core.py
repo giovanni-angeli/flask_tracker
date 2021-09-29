@@ -174,8 +174,11 @@ class Page(object):
         return u"<Page: {}@{}>".format(self.url, self.path)
 
     def _load(self, just_meta=False):
+
         with open(self.path, 'r', encoding='utf-8') as f:
-            logging.warning("self.path:{}, just_meta:{}".format(self.path, just_meta))
+
+            logging.warning("user:{}, self.path:{}, just_meta:{}".format(flask_login.current_user.name, self.path, just_meta))
+
             if just_meta:
                 lines = []
                 for l in f.readlines():
