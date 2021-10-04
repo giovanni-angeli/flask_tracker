@@ -429,9 +429,9 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
 
     modifications = db.relationship('History', backref='user')
 
-    authored_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.author_id")
-    assigned_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.assignee_id")
-    notified_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.notifier_id")
+    authored_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.author_id", backref='author')
+    assigned_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.assignee_id", backref='assignee')
+    notified_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.notifier_id", backref='notifier')
 
     @property
     def login(self):

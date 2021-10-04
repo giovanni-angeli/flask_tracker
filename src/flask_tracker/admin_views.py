@@ -396,6 +396,12 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         # ~ can_create = False
         # ~ can_delete = False
 
+        column_searchable_list = (
+            'name',
+            'role',
+            'email',
+        )
+
         column_labels = dict(followed='Followed Tasks')
 
         form_args = {
@@ -417,6 +423,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'role',
             'worktimes',
             'assigned_tasks',
+            'assigned_improvements',
             'followed',
         )
 
@@ -809,16 +816,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
     class ImprovementView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
 
-        column_filters = (
-            'name',
-            'status',
-            'date_created',
-            'description',
-            'customer.name',
-            'machine_model',
-            'date_modified',
-        )
-
         form_choices = {
             'machine_model': current_app.config.get('CLAIM_MACHINE_MODELS'),
             'status': current_app.config.get('ITEM_STATUSES'),
@@ -858,13 +855,49 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             ],
         }
 
-        form_excluded_columns = (
-            # ~ 'status',
+        column_filters = (
+            'name',
+            'description',
+            'status',
+            'priority',
+            'department',
+            'machine_model',
+            'due_date',
+            'category',
+            'assembly_subgroup',
+            'component',
+            'market_potential',
+            'customer.name',
+        )
+
+        form_columns = (
+            'name',
+            'description',
+            'status',
+            'priority',
+            'department',
+            'machine_model',
+            'due_date',
+            'category',
+            'assembly_subgroup',
+            'component',
+            'market_potential',
+            'estimated_resources',
+            'estimated_time_steps',
+            'notes',
+            'customer',
+            'author',
+            'assignee',
+            'notifier',
         )
 
         column_editable_list = (
             'status',
             'category',
+            'customer',
+            'author',
+            'assignee',
+            'notifier',
         )
 
     class HistoryView(TrackerModelView):     # pylint: disable=unused-variable, possibly-unused-variable
