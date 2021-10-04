@@ -839,7 +839,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 ("5", 'Qualità'),
                 ("6", 'Ergonomia'),
                 ("7", 'Sicurezza'),
-                ("8"', 'Trasporto'),
+                ("8", 'Trasporto'),
                 ("9", 'Diagnostica'),
                 ("10", 'Estetica'),
                 ("11", 'Modularità'),
