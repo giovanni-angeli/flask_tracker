@@ -6,8 +6,11 @@ import re
 from collections import OrderedDict
 from io import open
 
-from flask import (abort, url_for)
 import markdown
+
+from flask import (abort, url_for)
+
+import flask_login
 
 
 def clean_url(url):
