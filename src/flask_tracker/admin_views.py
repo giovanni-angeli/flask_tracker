@@ -823,36 +823,39 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'machine_model': current_app.config.get('CLAIM_MACHINE_MODELS'),
             'status': current_app.config.get('ITEM_STATUSES'),
             'priority': current_app.config.get('ITEM_PRIORITIES'),
-            'market_potential': current_app.config.get('IMPROVEMENT_MARKET_POTENTIAL', [
-                ("0", 'minimal'),
-                ("1", 'low'),
-                ("2", 'medium'),
-                ("4", 'high'),
-                ("5", 'maximal')
-            ]),
-            'category': current_app.config.get('IMPROVEMENT_CATEGORIES', [
-                ("0", 'Funzionalità'),
-                ("1", 'Affidabilità'),
-                ("2", 'Economia'),
-                ("3", 'Assemblaggio'),
-                ("4", 'Manutenzione'),
-                ("5", 'Qualità'),
-                ("6", 'Ergonomia'),
-                ("7", 'Sicurezza'),
-                ("8", 'Trasporto'),
-                ("9", 'Diagnostica'),
-                ("10", 'Estetica'),
-                ("11", 'Modularità'),
-                ("12", 'Collaudo'),
-            ]),
-            'assembly_subgroup': current_app.config.get('IMPROVEMENT_ASSEMBLY_SUBGROUPS', [
-                ("0", 'valvola 3 vie 2 posizioni DN4/6'),
-                ("1", 'pompa 0.2LT'),
-                ("2", 'pompa 0.5LT '),
-                ("3", 'pompa 1.5LT '),
-                ("4", 'pompa 3LT '),
-                ("5", 'valvola ceramica Thor'),
-            ]),
+            'market_potential': [
+                (k, k) for k in current_app.config.get('IMPROVEMENT_MARKET_POTENTIAL', [
+                    'minimal',
+                    'low',
+                    'medium',
+                    'high',
+                    'maximal'])
+            ],
+            'category': [
+                (k, k) for k in current_app.config.get('IMPROVEMENT_CATEGORIES', [
+                    'Funzionalità',
+                    'Affidabilità',
+                    'Economia',
+                    'Assemblaggio',
+                    'Manutenzione',
+                    'Qualità',
+                    'Ergonomia',
+                    'Sicurezza',
+                    'Trasporto',
+                    'Diagnostica',
+                    'Estetica',
+                    'Modularità',
+                    'Collaudo'])
+            ],
+            'assembly_subgroup': [
+                (k, k) for k in current_app.config.get('IMPROVEMENT_ASSEMBLY_SUBGROUPS', [
+                    'valvola 3 vie 2 posizioni DN4/6',
+                    'pompa 0.2LT',
+                    'pompa 0.5LT',
+                    'pompa 1.5LT',
+                    'pompa 3LT',
+                    'valvola ceramica Thor'])
+            ],
         }
 
         form_excluded_columns = (
