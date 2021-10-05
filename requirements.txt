@@ -31,7 +31,7 @@ pip==21.2.4
 pkg_resources==0.0.0
 pyrsistent==0.15.6
 pytz==2019.3
-PyYAML==5.2
+PyYAML==5.4
 requests==2.22.0
 setuptools==42.0.2
 six==1.13.0
