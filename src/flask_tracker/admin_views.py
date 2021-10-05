@@ -147,6 +147,18 @@ def _display_tasks_as_links(cls, context, obj, name):   # pylint: disable=unused
         logging.warning(traceback.format_exc())
     return ret
 
+def _display_time_to_local_tz(cls, context, obj, name):   # pylint: disable=unused-argument
+    value = getattr(obj, name)
+    if value:
+        value_ = value.replace(tzinfo=timezone.utc).astimezone().strftime("%d %b %Y (%I:%M:%S %p)")
+    else:
+        value_ = value
+    return Markup(value_)
+
+def _display_description(cls, context, obj, name):   # pylint: disable=unused-argument,no-self-use
+    value = getattr(obj, name)
+    return Markup(value)
+
 
 def define_view_classes(current_app):  # pylint: disable=too-many-statements
     """
@@ -174,15 +186,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             # 'name',
             'description',
         )
-
-        def _display_description(self, context, obj, name):   # pylint: disable=unused-argument,no-self-use
-            value = getattr(obj, name)
-            return Markup(value)
-
-        def _display_time_to_local_tz(self, context, obj, name):   # pylint: disable=unused-argument,no-self-use
-            value = getattr(obj, name)
-            value_ = value.replace(tzinfo=timezone.utc).astimezone().strftime("%d %b %Y (%I:%M:%S %p)")
-            return Markup(value_)
 
         column_formatters = {
             'date_created': _display_time_to_local_tz,
@@ -868,6 +871,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'component',
             'market_potential',
             'customer.name',
+            'assignee.name',
+            'author.name',
         )
 
         form_columns = (
@@ -884,12 +889,40 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'market_potential',
             'estimated_resources',
             'estimated_time_steps',
+            # ~ 'created_by',
             'notes',
             'customer',
             'author',
             'assignee',
             'notifier',
         )
+
+        column_list = (
+            'name',
+            'description',
+            'status',
+            'priority',
+            'department',
+            'machine_model',
+            'due_date',
+            'category',
+            'assembly_subgroup',
+            'component',
+            'market_potential',
+            'estimated_resources',
+            'estimated_time_steps',
+            # ~ 'created_by',
+            'notes',
+            'customer',
+            'author',
+            'assignee',
+            'notifier',
+        )
+
+        # ~ form_excluded_columns = (
+            # ~ 'date_created',
+            # ~ 'date_modified',
+        # ~ )
 
         column_editable_list = (
             'status',
@@ -898,7 +931,14 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'author',
             'assignee',
             'notifier',
+            'due_date',
         )
+
+        column_formatters = ItemViewBase.column_formatters.copy()
+        column_formatters.update({
+            'due_date': _display_time_to_local_tz,
+        })
+
 
     class HistoryView(TrackerModelView):     # pylint: disable=unused-variable, possibly-unused-variable
 

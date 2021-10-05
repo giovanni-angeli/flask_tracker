@@ -559,7 +559,7 @@ class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-pub
     db = MODELS_GLOBAL_CONTEXT['db']
 
     machine_model = db.Column(db.Unicode(64))
-    due_date = db.Column(db.DateTime)
+    due_date = db.Column(db.DateTime, default=datetime.utcnow)
     category = db.Column(db.Unicode(), default='')
     assembly_subgroup = db.Column(db.Unicode(), default='')
     component = db.Column(db.Unicode(), default='')
