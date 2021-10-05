@@ -23,7 +23,12 @@ from multiprocessing import Process
 
 
 import markdown  # pylint: disable=import-error
-from werkzeug import secure_filename  # pylint: disable=import-error, no-name-in-module
+
+try:
+    from werkzeug.utils import secure_filename  # pylint: disable=import-error, no-name-in-module
+except Exception:
+    from werkzeug import secure_filename  # pylint: disable=import-error, no-name-in-module
+
 from jinja2 import contextfunction   # pylint: disable=import-error
 from flask import Markup   # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
@@ -147,6 +152,7 @@ def _display_tasks_as_links(cls, context, obj, name):   # pylint: disable=unused
         logging.warning(traceback.format_exc())
     return ret
 
+
 def _display_time_to_local_tz(cls, context, obj, name):   # pylint: disable=unused-argument
     value = getattr(obj, name)
     if value:
@@ -154,6 +160,7 @@ def _display_time_to_local_tz(cls, context, obj, name):   # pylint: disable=unus
     else:
         value_ = value
     return Markup(value_)
+
 
 def _display_description(cls, context, obj, name):   # pylint: disable=unused-argument,no-self-use
     value = getattr(obj, name)
@@ -920,8 +927,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         )
 
         # ~ form_excluded_columns = (
-            # ~ 'date_created',
-            # ~ 'date_modified',
+        # ~ 'date_created',
+        # ~ 'date_modified',
         # ~ )
 
         column_editable_list = (
@@ -938,7 +945,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         column_formatters.update({
             'due_date': _display_time_to_local_tz,
         })
-
 
     class HistoryView(TrackerModelView):     # pylint: disable=unused-variable, possibly-unused-variable
 

@@ -32,6 +32,7 @@ INSTALL_REQUIRES = [
     'isoweek',
     'flask-login',
     'Flask-WTF',
+    'email_validator',
     'markdown',]
 
 SETUP_KW_ARGS = {
