@@ -79,6 +79,7 @@ def initialize_instance():
     import glob
 
     dst = sys.argv[1]
+    os.makedirs(dst, exist_ok=True)
 
     for file in glob.glob(os.path.join(HERE, "default_conf", '*.*')):
         logging.warning("copying {} in {}".format(file, dst))

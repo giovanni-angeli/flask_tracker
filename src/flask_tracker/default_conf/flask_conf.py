@@ -21,7 +21,42 @@ with (HERE / "categories.txt").open('rt') as f:
     categories_ = [l.strip() for l in f.readlines()]
 
 sample_task_content_lines_ = []
-with (HERE / "sample_task_content.txt").open('rt') as f:
+sample_task_content_file_path = pathlib.Path.joinpath(HERE, "sample_task_content.txt")
+
+if not sample_task_content_file_path.exists():
+    with sample_task_content_file_path.open('wt') as f:
+        _text = '''
+            ###  Contesto
+
+            *describe here the context of this task*
+
+            ###  Prerequisiti
+
+              1. primo  requirement
+              1. secondo requirement
+              1. terzo  requirement
+
+            ###  Obiettivo
+
+            *describe here what this task is aimed to*
+
+            ####  Passi Previsti
+
+              1. primo  step
+              1. secondo step
+              1. terzo  step
+
+            ####  Passi Eseguiti
+
+
+
+
+            ____________
+
+        '''
+        f.write(_text)
+
+with sample_task_content_file_path.open('rt') as f:
     sample_task_content_lines_ = f.readlines()
 
 # ~ DATA_PATH =  '/mnt/dati/flask_tracker/data'
