@@ -66,7 +66,7 @@ edit your conf file:
 
 run the server:
 
-    $ ${FT_VENV_ROOT}/bin/flask_tracker -c ${FT_RUNCONF_ROOT}/flask_conf.py
+    $ ${FT_VENV_ROOT}/bin/flask_tracker_run -c ${FT_RUNCONF_ROOT}/flask_conf.py
 
 open the browser:
 
