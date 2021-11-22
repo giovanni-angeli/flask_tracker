@@ -16,11 +16,11 @@ import traceback
 import json
 import time
 import difflib
+import re
 import urllib.parse
 from datetime import datetime, timezone, timedelta
 
 from multiprocessing import Process
-
 
 import markdown  # pylint: disable=import-error
 
@@ -38,6 +38,16 @@ from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-
 
 from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT, ItemBase)
 
+import unidecode # pylint: disable=import-error
+
+
+def slugify(text):
+    try:
+        text = unidecode.unidecode(text).lower()
+    except ModuleNotFoundError:
+        text = text.lower()
+
+    return re.sub(r'[\W_]+', '-', text)
 
 def has_capabilities(app, user, table_name, operation='*'):
 
@@ -830,39 +840,33 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'machine_model': current_app.config.get('CLAIM_MACHINE_MODELS'),
             'status': current_app.config.get('ITEM_STATUSES'),
             'priority': current_app.config.get('ITEM_PRIORITIES'),
-            'market_potential': [
-                (k, k) for k in current_app.config.get('IMPROVEMENT_MARKET_POTENTIAL', [
-                    'minimal',
-                    'low',
-                    'medium',
-                    'high',
-                    'maximal'])
-            ],
-            'category': [
-                (k, k) for k in current_app.config.get('IMPROVEMENT_CATEGORIES', [
-                    'Funzionalità',
-                    'Affidabilità',
-                    'Economia',
-                    'Assemblaggio',
-                    'Manutenzione',
-                    'Qualità',
-                    'Ergonomia',
-                    'Sicurezza',
-                    'Trasporto',
-                    'Diagnostica',
-                    'Estetica',
-                    'Modularità',
-                    'Collaudo'])
-            ],
-            'assembly_subgroup': [
-                (k, k) for k in current_app.config.get('IMPROVEMENT_ASSEMBLY_SUBGROUPS', [
-                    'valvola 3 vie 2 posizioni DN4/6',
-                    'pompa 0.2LT',
-                    'pompa 0.5LT',
-                    'pompa 1.5LT',
-                    'pompa 3LT',
-                    'valvola ceramica Thor'])
-            ],
+            'market_potential': current_app.config.get('IMPROVEMENT_MARKET_POTENTIAL', [(slugify(l), l.capitalize()) for l in (
+                'minimal',
+                'low',
+                'medium',
+                'high',
+                'maximal')]),
+            'category': current_app.config.get('IMPROVEMENT_CATEGORIES', [(slugify(l), l.capitalize()) for l in (
+                'Funzionalità',
+                'Affidabilità',
+                'Economia',
+                'Assemblaggio',
+                'Manutenzione',
+                'Qualità',
+                'Ergonomia',
+                'Sicurezza',
+                'Trasporto',
+                'Diagnostica',
+                'Estetica',
+                'Modularità',
+                'Collaudo')]),
+            'assembly_subgroup': current_app.config.get('IMPROVEMENT_ASSEMBLY_SUBGROUPS', [(slugify(l), l.capitalize()) for l in (
+                'valvola 3 vie 2 posizioni DN4/6',
+                'pompa 0.2LT',
+                'pompa 0.5LT',
+                'pompa 1.5LT',
+                'pompa 3LT',
+                'valvola ceramica Thor')]),
         }
 
         column_filters = (

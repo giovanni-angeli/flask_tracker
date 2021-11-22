@@ -33,7 +33,8 @@ INSTALL_REQUIRES = [
     'flask-login',
     'Flask-WTF',
     'email_validator',
-    'markdown',]
+    'markdown',
+    'unidecode',]
 
 SETUP_KW_ARGS = {
     'name': 'flask_tracker',
