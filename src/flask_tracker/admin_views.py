@@ -594,6 +594,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'installation_place',
             'date_created',
             'date_modified',
+            'damaged_group',
         )
 
         form_args = {
@@ -658,6 +659,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'serial_number',
             'installation_date',
             # ~ 'attachments',
+            'damaged_group',
         )
 
         column_details_list = (
