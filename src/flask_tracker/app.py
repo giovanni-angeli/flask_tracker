@@ -10,6 +10,8 @@ import os
 import sys
 import logging
 
+import flask_migrate                 # pylint: disable=import-error
+
 from flask import Flask  # pylint: disable=import-error
 
 from flask_tracker.models import (init_orm, get_package_version)
@@ -66,6 +68,9 @@ def _init_app(argv):
 
     db = init_orm(app)
     init_admin(app, db)
+
+    flask_migrate_ = flask_migrate.Migrate(compare_type=True)
+    flask_migrate_.init_app(app, db, render_as_batch=True)
 
     wiki_blueprint.template_folder = os.path.join(HERE, 'wiki', 'templates')
     app.register_blueprint(wiki_blueprint, url_prefix='/wiki')
