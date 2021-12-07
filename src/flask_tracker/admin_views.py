@@ -922,6 +922,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'author',
             'assignee',
             'notifier',
+            'content',
         )
 
         column_list = (
@@ -966,6 +967,20 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         column_formatters.update({
             'due_date': _display_time_to_local_tz,
         })
+
+        def get_create_form(self):
+
+            form_ = super().get_create_form()
+
+            form_.content = fields.TextAreaField(
+                'content', [
+                    validators.optional(), validators.length(
+                        max=ItemBase.content_max_len)],
+                        render_kw={
+                            "style": "background:#fff; border:dashed #DD3333 1px; height:480px;"}
+            )
+
+            return form_
 
     class HistoryView(TrackerModelView):     # pylint: disable=unused-variable, possibly-unused-variable
 
