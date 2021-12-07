@@ -21,7 +21,6 @@ from flask import Markup  # pylint: disable=import-error
 from werkzeug.security import generate_password_hash  # pylint: disable=import-error
 import flask_sqlalchemy              # pylint: disable=import-error
 
-
 sqlalchemy_db_ = flask_sqlalchemy.SQLAlchemy()
 sqlalchemy_session_ = None
 sqlalchemy_Model = sqlalchemy_db_.Model
@@ -564,6 +563,7 @@ class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-pub
     assembly_subgroup = db.Column(db.Unicode(), default='')
     component = db.Column(db.Unicode(), default='')
     market_potential = db.Column(db.Unicode(), default='')
+    target_department = db.Column(db.Unicode(), default='')
 
     content = db.Column(db.Unicode(5 * 1024), default='')
     estimated_resources = db.Column(db.Unicode(), default='')

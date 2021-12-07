@@ -867,6 +867,20 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 'pompa 1.5LT',
                 'pompa 3LT',
                 'valvola ceramica Thor')]),
+            'department': current_app.config.get('IMPROVEMENT_DEPARTMENTS', [(l, l.capitalize()) for l in (
+                'R&D',
+                'PRODUZIONE',
+                'SERVICE',
+                'COMMERCIALE',
+                'MARKETING',
+                'QUALITÀ')]),
+            'target_department': current_app.config.get('IMPROVEMENT_DEPARTMENTS', [(l, l.capitalize()) for l in (
+                'R&D',
+                'PRODUZIONE',
+                'SERVICE',
+                'COMMERCIALE',
+                'MARKETING',
+                'QUALITÀ')])
         }
 
         column_filters = (
@@ -875,6 +889,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'status',
             'priority',
             'department',
+            'target_department',
             'machine_model',
             'due_date',
             'category',
@@ -892,6 +907,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'status',
             'priority',
             'department',
+            'target_department',
             'machine_model',
             'due_date',
             'category',
@@ -914,6 +930,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'status',
             'priority',
             'department',
+            'target_department',
             'machine_model',
             'due_date',
             'category',
