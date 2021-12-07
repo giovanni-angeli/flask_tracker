@@ -268,6 +268,19 @@ claimings = sqlalchemy_db_.Table(
         sqlalchemy_db_.ForeignKey('claim.id'),
         primary_key=True))
 
+notifyings = sqlalchemy_db_.Table(
+    'notifyings',
+    sqlalchemy_db_.Column(
+        'user_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('user.id'),
+        primary_key=True),
+    sqlalchemy_db_.Column(
+        'improvement_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('improvement.id'),
+        primary_key=True))
+
 
 class BaseModel(object):                         # pylint: disable=too-few-public-methods
 
@@ -430,7 +443,7 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
 
     authored_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.author_id", backref='author')
     assigned_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.assignee_id", backref='assignee')
-    notified_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.notifier_id", backref='notifier')
+    # notified_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.notifier_id", backref='notifier')
 
     @property
     def login(self):
@@ -574,7 +587,8 @@ class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-pub
 
     author_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
     assignee_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
-    notifier_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
+    # notifier_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
+    followers = db.relationship('User', secondary=notifyings, backref='notified')
 
 
 def do_delete_pending_objects(session, flush_context, instances=None):  # pylint: disable=unused-argument

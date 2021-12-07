@@ -908,6 +908,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'priority',
             'department',
             'target_department',
+            'followers',
             'machine_model',
             'due_date',
             'category',
@@ -921,7 +922,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'customer',
             'author',
             'assignee',
-            'notifier',
+            # 'notifier',
             'content',
         )
 
@@ -945,7 +946,34 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'customer',
             'author',
             'assignee',
-            'notifier',
+            # 'notifier',
+
+        )
+
+        column_details_list = (
+            'date_created',
+            'date_modified',
+            'name',
+            'description',
+            'status',
+            'priority',
+            'department',
+            'target_department',
+            'followers',
+            'machine_model',
+            'due_date',
+            'category',
+            'assembly_subgroup',
+            'component',
+            'market_potential',
+            'content',
+            'estimated_resources',
+            'estimated_time_steps',
+            'notes',
+            'customer',
+            'assignee',
+            # 'notifier',
+            
         )
 
         # ~ form_excluded_columns = (
@@ -959,8 +987,9 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'customer',
             'author',
             'assignee',
-            'notifier',
+            # 'notifier',
             'due_date',
+            'followers',
         )
 
         column_formatters = ItemViewBase.column_formatters.copy()
