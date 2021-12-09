@@ -31,15 +31,15 @@ alias ft_source_code="ft_activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker"
 alias ft_migrate_init="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db init)"
 # alias ft_migrate_migrate="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db migrate)"
 alias ft_migrate_migrate=migrate_init
-alias ft_migrate_upgrade="(. ft_source_code && flask db upgrade)"
-alias ft_migrate_downgrade="(. ft_source_code && flask db downgrade)"
-alias ft_migrate_history="(. ft_source_code && flask db history)"
+alias ft_migrate_upgrade="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db upgrade)"
+alias ft_migrate_downgrade="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db downgrade)"
+alias ft_migrate_history="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db history)"
 
 migrate_init() {
 	arg="$1"
 	msg="$2"
 	init_message="$arg '$msg'"
-	cmd_migrate="(. ft_source_code && flask db migrate ${init_message})"
+	cmd_migrate="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db migrate ${init_message})"
 	if [[ -z "$arg" ]]; then
 		"$cmd_migrate"
 	elif [[ "$arg" == '--message' ]] && [[ -n "$msg" ]]; then
