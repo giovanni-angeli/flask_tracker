@@ -36,13 +36,16 @@ alias ft_migrate_downgrade="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_R
 alias ft_migrate_history="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db history)"
 
 migrate_init() {
-	arg="$1"
-	msg="$2"
-	init_message="$arg '$msg'"
-	cmd_migrate="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db migrate ${init_message})"
-	if [[ -z "$arg" ]]; then
-		"$cmd_migrate"
-	elif [[ "$arg" == '--message' ]] && [[ -n "$msg" ]]; then
-		"$cmd_migrate"
+	cmd_part1="${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker"
+	cmd_part2="flask db migrate"
+
+	echo "Add optional migrate message (double quotes will be automatically added)"
+	read migrate_msg
+	if [[ -n "$migrate_msg" ]]; then
+		cmd_part2+=" -m \"${migrate_msg}\""
 	fi
+	cmd_migrate="( . $cmd_part1 && $cmd_part2 )";
+	echo "executing cmd: $cmd_migrate"
+
+	eval $cmd_migrate
 }
