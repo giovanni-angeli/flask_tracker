@@ -835,6 +835,14 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         })
 
     class ImprovementView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
+        improvement_depts = (
+            'R&D',
+            'PRODUZIONE',
+            'SERVICE',
+            'COMMERCIALE',
+            'MARKETING',
+            'QUALITÀ'
+        )
 
         form_choices = {
             'machine_model': current_app.config.get('CLAIM_MACHINE_MODELS'),
@@ -867,20 +875,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 'pompa 1.5LT',
                 'pompa 3LT',
                 'valvola ceramica Thor')]),
-            'department': current_app.config.get('IMPROVEMENT_DEPARTMENTS', [(l, l.capitalize()) for l in (
-                'R&D',
-                'PRODUZIONE',
-                'SERVICE',
-                'COMMERCIALE',
-                'MARKETING',
-                'QUALITÀ')]),
-            'target_department': current_app.config.get('IMPROVEMENT_DEPARTMENTS', [(l, l.capitalize()) for l in (
-                'R&D',
-                'PRODUZIONE',
-                'SERVICE',
-                'COMMERCIALE',
-                'MARKETING',
-                'QUALITÀ')])
+            'department': current_app.config.get('IMPROVEMENT_DEPARTMENTS', [(l, l.capitalize()) for l in improvement_depts]),
+            'target_department': current_app.config.get('IMPROVEMENT_DEPARTMENTS', [(l, l.capitalize()) for l in improvement_depts])
         }
 
         column_filters = (
