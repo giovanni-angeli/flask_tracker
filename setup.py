@@ -34,7 +34,8 @@ INSTALL_REQUIRES = [
     'Flask-WTF',
     'email_validator',
     'markdown',
-    'unidecode',]
+    'unidecode',
+    'flask-migrate']
 
 SETUP_KW_ARGS = {
     'name': 'flask_tracker',

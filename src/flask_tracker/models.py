@@ -21,7 +21,6 @@ from flask import Markup  # pylint: disable=import-error
 from werkzeug.security import generate_password_hash  # pylint: disable=import-error
 import flask_sqlalchemy              # pylint: disable=import-error
 
-
 sqlalchemy_db_ = flask_sqlalchemy.SQLAlchemy()
 sqlalchemy_session_ = None
 sqlalchemy_Model = sqlalchemy_db_.Model
@@ -269,6 +268,19 @@ claimings = sqlalchemy_db_.Table(
         sqlalchemy_db_.ForeignKey('claim.id'),
         primary_key=True))
 
+notifyings = sqlalchemy_db_.Table(
+    'notifyings',
+    sqlalchemy_db_.Column(
+        'user_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('user.id'),
+        primary_key=True),
+    sqlalchemy_db_.Column(
+        'improvement_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('improvement.id'),
+        primary_key=True))
+
 
 class BaseModel(object):                         # pylint: disable=too-few-public-methods
 
@@ -431,7 +443,7 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
 
     authored_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.author_id", backref='author')
     assigned_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.assignee_id", backref='assignee')
-    notified_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.notifier_id", backref='notifier')
+    # notified_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.notifier_id", backref='notifier')
 
     @property
     def login(self):
@@ -564,6 +576,7 @@ class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-pub
     assembly_subgroup = db.Column(db.Unicode(), default='')
     component = db.Column(db.Unicode(), default='')
     market_potential = db.Column(db.Unicode(), default='')
+    target_department = db.Column(db.Unicode(), default='')
 
     content = db.Column(db.Unicode(5 * 1024), default='')
     estimated_resources = db.Column(db.Unicode(), default='')
@@ -574,7 +587,8 @@ class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-pub
 
     author_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
     assignee_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
-    notifier_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
+    # notifier_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
+    followers = db.relationship('User', secondary=notifyings, backref='notified')
 
 
 def do_delete_pending_objects(session, flush_context, instances=None):  # pylint: disable=unused-argument

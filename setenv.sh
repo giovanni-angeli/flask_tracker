@@ -9,9 +9,11 @@ export PYTHONDONTWRITEBYTECODE=1
 export FT_PROJECT_ROOT=/opt/PROJECTS/flask_tracker
 export FT_RUNCONF_ROOT=/opt/flask_tracker/conf
 export FT_VENV_ROOT=/opt/flask_tracker/venv
+export FLASK_APP="app:_init_app(['${FT_VENV_ROOT}/bin/flask_tracker_run' , '-c', '${FT_RUNCONF_ROOT}/flask_conf.py'])"
 
 
 export | grep FT_
+export | grep _APP
 mkdir -p ${FT_RUNCONF_ROOT}
 mkdir -p ${FT_VENV_ROOT}
 alias ft_create_virtenv="virtualenv -p /usr/bin/python3 ${FT_VENV_ROOT}"
@@ -25,3 +27,25 @@ alias ft_run=". ${FT_VENV_ROOT}/bin/activate && ${FT_VENV_ROOT}/bin/flask_tracke
 alias ft_twine_test_dist="(cd ${FT_PROJECT_ROOT} && twine check dist/*)"
 alias ft_twine_upload_test="(cd ${FT_PROJECT_ROOT} && twine upload --repository-url https://test.pypi.org/legacy/ dist/*)"
 alias ft_twine_upload="(cd ${FT_PROJECT_ROOT} && twine upload dist/*)"
+alias ft_source_code="ft_activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker"
+alias ft_migrate_init="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db init)"
+# alias ft_migrate_migrate="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db migrate)"
+alias ft_migrate_migrate=migrate_init
+alias ft_migrate_upgrade="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db upgrade)"
+alias ft_migrate_downgrade="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db downgrade)"
+alias ft_migrate_history="(. ${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker && flask db history)"
+
+migrate_init() {
+	cmd_part1="${FT_VENV_ROOT}/bin/activate && cd ${FT_PROJECT_ROOT}/src/flask_tracker"
+	cmd_part2="flask db migrate"
+
+	echo "Add optional migrate message (double quotes will be automatically added)"
+	read migrate_msg
+	if [[ -n "$migrate_msg" ]]; then
+		cmd_part2+=" -m \"${migrate_msg}\""
+	fi
+	cmd_migrate="( . $cmd_part1 && $cmd_part2 )";
+	echo "executing cmd: $cmd_migrate"
+
+	eval $cmd_migrate
+}

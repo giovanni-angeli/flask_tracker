@@ -837,6 +837,14 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         })
 
     class ImprovementView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
+        improvement_depts = (
+            'R&D',
+            'PRODUZIONE',
+            'SERVICE',
+            'COMMERCIALE',
+            'MARKETING',
+            'QUALITÀ'
+        )
 
         form_choices = {
             'machine_model': current_app.config.get('CLAIM_MACHINE_MODELS'),
@@ -869,6 +877,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 'pompa 1.5LT',
                 'pompa 3LT',
                 'valvola ceramica Thor')]),
+            'department': current_app.config.get('IMPROVEMENT_DEPARTMENTS', [(l, l.capitalize()) for l in improvement_depts]),
+            'target_department': current_app.config.get('IMPROVEMENT_DEPARTMENTS', [(l, l.capitalize()) for l in improvement_depts])
         }
 
         column_filters = (
@@ -877,6 +887,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'status',
             'priority',
             'department',
+            'target_department',
             'machine_model',
             'due_date',
             'category',
@@ -894,6 +905,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'status',
             'priority',
             'department',
+            'target_department',
+            'followers',
             'machine_model',
             'due_date',
             'category',
@@ -907,7 +920,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'customer',
             'author',
             'assignee',
-            'notifier',
+            # 'notifier',
+            'content',
         )
 
         column_list = (
@@ -916,6 +930,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'status',
             'priority',
             'department',
+            'target_department',
             'machine_model',
             'due_date',
             'category',
@@ -929,7 +944,34 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'customer',
             'author',
             'assignee',
-            'notifier',
+            # 'notifier',
+
+        )
+
+        column_details_list = (
+            'date_created',
+            'date_modified',
+            'name',
+            'description',
+            'status',
+            'priority',
+            'department',
+            'target_department',
+            'followers',
+            'machine_model',
+            'due_date',
+            'category',
+            'assembly_subgroup',
+            'component',
+            'market_potential',
+            'content',
+            'estimated_resources',
+            'estimated_time_steps',
+            'notes',
+            'customer',
+            'assignee',
+            # 'notifier',
+            
         )
 
         # ~ form_excluded_columns = (
@@ -943,14 +985,29 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'customer',
             'author',
             'assignee',
-            'notifier',
+            # 'notifier',
             'due_date',
+            'followers',
         )
 
         column_formatters = ItemViewBase.column_formatters.copy()
         column_formatters.update({
             'due_date': _display_time_to_local_tz,
         })
+
+        def get_create_form(self):
+
+            form_ = super().get_create_form()
+
+            form_.content = fields.TextAreaField(
+                'content', [
+                    validators.optional(), validators.length(
+                        max=ItemBase.content_max_len)],
+                        render_kw={
+                            "style": "background:#fff; border:dashed #DD3333 1px; height:480px;"}
+            )
+
+            return form_
 
     class HistoryView(TrackerModelView):     # pylint: disable=unused-variable, possibly-unused-variable
 
