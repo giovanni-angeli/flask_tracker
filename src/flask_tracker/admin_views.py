@@ -242,49 +242,89 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             ret = super(TrackerModelView, self).on_model_change(form_, obj, is_created)
             return ret
 
-    class WorkTimeView(TrackerModelView):  # pylint: disable=unused-variable, possibly-unused-variable
+    class WorkTimeBaseView(TrackerModelView):  # pylint: disable=unused-variable, possibly-unused-variable
 
-        column_editable_list = (
+        column_editable_list = [
             'duration',
-            # ~ 'user',
-            # ~ 'task',
             'date_created',
             'description',
-        )
+        ]
 
-        column_sortable_list = (
+        column_sortable_list = [
             'date_created',
-            ('user', ('user.name', )),
-            ('task', ('task.name', )))
+            ('user', ('user.name', ))
+        ]
 
-        column_list = (
+        column_list = [
             'date_created',
             'description',
             'duration',
             'user',
-            'task',
-        )
+        ]
 
-        column_details_exclude_list = (
+        column_details_exclude_list = [
             'date_modified',
-        )
+        ]
 
         column_labels = dict(date_created='Date')
 
-        column_filters = (
+        column_filters = [
             'date_created',
             'description',
             'user.name',
-            'task.name',
-            'task.milestone',
-            'task',
-        )
+        ]
 
         form_args = {
             'user': {
                 'default': get_current_user_name,
             },
         }
+
+        def get_create_form(self):
+
+            form_ = super().get_create_form()
+
+            def _local_now():
+                date_utc_ = datetime.utcnow()
+                date_local_ = date_utc_ - timedelta(seconds=time.timezone)
+                logging.warning("date_local_:{}, date_utc_:{}".format(date_local_, date_utc_))
+                return date_local_
+
+            form_.date_created = fields.DateTimeField(
+                'date',
+                [validators.optional(),
+                 validators.DataRequired()],
+                description='date of the activity',
+                default=_local_now
+            )
+
+            return form_
+
+        def on_model_change(self, form_, obj, is_created):
+
+            if hasattr(form_, 'date_created') and form_.date_created:
+                date_local_ = form_.date_created.data
+                date_utc_ = date_local_ + timedelta(seconds=time.timezone)
+                logging.warning("date_local_:{}, date_utc_:{}".format(date_local_, date_utc_))
+                obj.date_created = date_utc_
+
+            ret = super().on_model_change(form, obj, is_created)
+            return ret
+
+    class WorkTimeView(WorkTimeBaseView):  # pylint: disable=unused-variable, possibly-unused-variable
+
+        column_sortable_list = WorkTimeBaseView.column_sortable_list.copy()
+        column_sortable_list += [('task', ('task.name', ))]
+
+        column_list = WorkTimeBaseView.column_list.copy()
+        column_list += ['task',]
+
+        column_filters = WorkTimeBaseView.column_filters.copy()
+        column_filters += [
+            'task.name',
+            'task.milestone',
+            'task',
+        ]
 
         def display_task(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
             value = getattr(obj, name)
@@ -302,36 +342,32 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'task': display_task,
         })
 
-        def get_create_form(self):
+    class WorkTimeClaimView(TrackerModelView):  # pylint: disable=unused-variable, possibly-unused-variable
 
-            form_ = super().get_create_form()
+        column_sortable_list = WorkTimeBaseView.column_sortable_list.copy()
+        column_sortable_list += [('claim', ('claim.name', ))]
 
-            def _local_now():
-                date_utc_ = datetime.utcnow()
-                date_local_ = date_utc_ - timedelta(seconds=time.timezone)
-                logging.warning("date_local_:{}, date_utc_:{}".format(date_local_, date_utc_))
-                return date_local_
+        column_list = WorkTimeBaseView.column_list.copy()
+        column_list += ['claim',]
 
-            form_.date_created = fields.DateTimeField('date',
-                                                      [validators.optional(),
-                                                       validators.DataRequired()],
-                                                      description='date of the activity',
-                                                      default=_local_now)
-            # ~ logging.warning("dir(form_.date_created):{}".format(dir(form_.date_created)))
-            # ~ logging.warning("form_.date_created:{}".format(form_.date_created))
+        column_filters = WorkTimeBaseView.column_filters.copy()
+        column_filters += ['claim', ]
 
-            return form_
-
-        def on_model_change(self, form_, obj, is_created):
-
-            if hasattr(form_, 'date_created') and form_.date_created:
-                date_local_ = form_.date_created.data
-                date_utc_ = date_local_ + timedelta(seconds=time.timezone)
-                logging.warning("date_local_:{}, date_utc_:{}".format(date_local_, date_utc_))
-                obj.date_created = date_utc_
-
-            ret = super(WorkTimeView, self).on_model_change(form, obj, is_created)
+        def display_claim(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
+            value = getattr(obj, name)
+            ret = value
+            try:
+                html_ = '<a href="/claim/details/?id={}" title="view claim">{}</a>'.format(
+                    obj.claim_id, value)
+                ret = Markup(html_)
+            except BaseException:
+                logging.warning(traceback.format_exc())
             return ret
+
+        column_formatters = TrackerModelView.column_formatters.copy()
+        column_formatters.update({
+            'claim': display_claim,
+        })
 
     class OrderView(TrackerModelView):    # pylint: disable=unused-variable, possibly-unused-variable
 
@@ -422,8 +458,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'email',
         )
 
-        column_labels = dict(followed='Followed Tasks')
-
         form_args = {
             'email': {
                 'validators': [validators.Email()],
@@ -482,7 +516,10 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'followed': _display_tasks_as_links,
         })
 
-        column_labels = dict(worktimes='Worked Hours in This Week')
+        column_labels = dict(
+            worktimes='Worked Hours in This Week',
+            followed='Followed Tasks'
+        )
 
     class ItemViewBase(TrackerModelView):     # pylint: disable=unused-variable, possibly-unused-variable
 
@@ -660,6 +697,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'installation_date',
             # ~ 'attachments',
             'damaged_group',
+            'worktimes_claim',
         )
 
         column_details_list = (
@@ -684,7 +722,31 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'is_covered_by_warranty',
             # ~ 'modifications',
             'followers',
+            'worktimes_claim',
         )
+
+        custom_row_actions = [
+            ("/add_a_working_claim_time_slot", '', 'fa fa-time glyphicon glyphicon-time',
+             '_self', 'confirm adding hours?', 'Add Worked Hours'),
+        ]
+
+        def display_worktimes_claim(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
+
+            total = sum([h.duration for h in obj.worktimes_claim])
+            ret = total
+            try:
+                html_ = '<a href="/worktimeclaim/?flt2_claim_name_equals={}" title="view worked hrs details.">{}</a>'.format(
+                    urllib.parse.quote_plus(obj.name), total)
+
+                ret = Markup(html_)
+            except BaseException:
+                logging.warning(traceback.format_exc())
+            return ret
+
+        column_formatters = ItemViewBase.column_formatters.copy()
+        column_formatters.update({
+            'worktimes_claim': display_worktimes_claim,
+        })
 
     class TaskView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
 
@@ -945,7 +1007,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'author',
             'assignee',
             # 'notifier',
-
         )
 
         column_details_list = (
@@ -971,7 +1032,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'customer',
             'assignee',
             # 'notifier',
-            
         )
 
         # ~ form_excluded_columns = (
@@ -1001,10 +1061,12 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
             form_.content = fields.TextAreaField(
                 'content', [
-                    validators.optional(), validators.length(
-                        max=ItemBase.content_max_len)],
-                        render_kw={
-                            "style": "background:#fff; border:dashed #DD3333 1px; height:480px;"}
+                    validators.optional(),
+                    validators.length(
+                        max=ItemBase.content_max_len)
+                    ],
+                render_kw={
+                    "style": "background:#fff; border:dashed #DD3333 1px; height:480px;"}
             )
 
             return form_

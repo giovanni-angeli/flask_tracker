@@ -35,6 +35,7 @@ from flask_tracker.models import (
     Order,
     User,
     WorkTime,
+    WorkTimeClaim,
     Attachment,
     History,
     Claim,
@@ -273,6 +274,47 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         url_ = quote(url_, safe='/?&=+')
         return redirect(url_)
 
+    @flask_admin.expose('/add_a_working_claim_time_slot', methods=('GET', ))
+    @protect
+    def add_a_working_claim_time_slot(self):    # pylint: disable=no-self-use
+
+        if not flask_login.current_user.is_authenticated:
+            return redirect(url_for('.login'))
+
+        session = MODELS_GLOBAL_CONTEXT['session']
+
+        if request.args.get('id') is not None:
+            id_ = request.args['id']
+            selected_claim = session.query(Claim).filter(Claim.id == id_).first()
+            hours_to_add = 0
+            date_ = datetime.now().date().isoformat()
+        else:
+            selected_claim_name = request.args.get('selected_task').split('::')[0]
+            selected_claim = session.query(Claim).filter(Claim.name == selected_claim_name).first()
+            hours_to_add = request.args.get('hours_to_add')
+            date_ = request.args.get('date')
+
+        current_user = session.query(User).filter(User.id == flask_login.current_user.id).first()
+
+        toks = [int(i) for i in date_.split('-')] + [9, 0]
+        date_local_ = datetime(*toks)
+        date_utc_ = date_local_ + timedelta(seconds=time.timezone)
+        logging.warning("date_:{}, date_local_:{}, date_utc_:{}".format(date_, date_local_, date_utc_))
+        data = {
+            'duration': float(hours_to_add),
+            'user': current_user,
+            'claim': selected_claim,
+            'date_created': date_utc_,
+        }
+
+        wt = WorkTimeClaim(**data)
+        session.add(wt)
+        session.commit()
+
+        url_ = "/worktimeclaim/edit/?id={}".format(wt.id)
+        url_ = quote(url_, safe='/?&=+')
+        return redirect(url_)
+
     @flask_admin.expose('/report', methods=('GET', 'POST'))
     @protect
     def report_query(self):
@@ -414,6 +456,7 @@ def init_admin(app, db):
     admin_.add_view(HistoryView(History, db.session, category="admin"))    # pylint: disable=undefined-variable
     admin_.add_view(UserView(User, db.session, category="admin"))    # pylint: disable=undefined-variable
     admin_.add_view(WorkTimeView(WorkTime, db.session, category="admin"))    # pylint: disable=undefined-variable
+    admin_.add_view(WorkTimeClaimView(WorkTimeClaim, db.session, category="admin")) # pylint: disable=undefined-variable
 
     admin_.add_link(MenuLink(name='Wiki', url='/wiki/'))
 
