@@ -2,6 +2,7 @@
 
 # pylint: disable=missing-docstring
 # pylint: disable=logging-format-interpolation
+# pylint: disable=consider-using-f-string
 # pylint: disable=line-too-long
 # pylint: disable=invalid-name
 # pylint: disable=too-many-arguments
@@ -122,6 +123,52 @@ class LoginForm(form.Form):
 
 class TrackerAdminResources(flask_admin.AdminIndexView):
 
+    @staticmethod
+    def __get_working_time_edit_form_url(session, request_args, model='Task'):
+        model_klass = eval(model)   #pylint: disable=eval-used
+        id_ = request_args.get('id', None)
+
+        if id_ is not None:
+            selected_model = session.query(model_klass).filter(model_klass.id == id_).first()
+            hours_to_add = 0
+            date_ = datetime.now().date().isoformat()
+        else:
+            selected_task_name = request_args.get('selected_task').split('::')[0]
+            selected_model = session.query(Task).filter(Task.name == selected_task_name).first()
+            hours_to_add = request_args.get('hours_to_add')
+            date_ = request_args.get('date')
+
+        current_user = session.query(User).filter(User.id == flask_login.current_user.id).first()
+
+        toks = [int(i) for i in date_.split('-')] + [9, 0]
+        date_local_ = datetime(*toks)
+        date_utc_ = date_local_ + timedelta(seconds=time.timezone)
+        logging.warning("date_:{}, date_local_:{}, date_utc_:{}".format(date_, date_local_, date_utc_))
+
+        data = {
+            'duration': float(hours_to_add),
+            'user': current_user,
+            'date_created': date_utc_,
+            model.lower(): selected_model,
+        }
+        # logging.warning(f'data > {data}')
+
+        worktime_map = {
+            'Task' : (WorkTime, 'worktime'),
+            'Claim' : (WorkTimeClaim, 'worktimeclaim'),
+        }
+
+        wt_cls = worktime_map.get(model)[0]
+        wt = wt_cls(**data)
+        session.add(wt)
+        session.commit()
+
+        wt_url = worktime_map.get(model)[1]
+        url_ = "/{1}/edit/?id={0}".format(wt.id, wt_url)
+        url_ = quote(url_, safe='/?&=+')
+
+        return url_
+
     @flask_admin.expose("/")
     @flask_admin.expose("/home")
     @flask_admin.expose("/index")
@@ -225,7 +272,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
 
         self._template_args['form'] = form_
 
-        return super(TrackerAdminResources, self).index()
+        return super().index()
 
     @flask_admin.expose('/logout/')
     def logout(self):  # pylint: disable=no-self-use
@@ -240,39 +287,12 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         if not flask_login.current_user.is_authenticated:
             return redirect(url_for('.login'))
 
-        session = MODELS_GLOBAL_CONTEXT['session']
+        redirect_url = self.__get_working_time_edit_form_url(
+            session=MODELS_GLOBAL_CONTEXT['session'],
+            request_args=request.args,
+        )
 
-        if request.args.get('id') is not None:
-            id_ = request.args['id']
-            selected_task = session.query(Task).filter(Task.id == id_).first()
-            hours_to_add = 0
-            date_ = datetime.now().date().isoformat()
-        else:
-            selected_task_name = request.args.get('selected_task').split('::')[0]
-            selected_task = session.query(Task).filter(Task.name == selected_task_name).first()
-            hours_to_add = request.args.get('hours_to_add')
-            date_ = request.args.get('date')
-
-        current_user = session.query(User).filter(User.id == flask_login.current_user.id).first()
-
-        toks = [int(i) for i in date_.split('-')] + [9, 0]
-        date_local_ = datetime(*toks)
-        date_utc_ = date_local_ + timedelta(seconds=time.timezone)
-        logging.warning("date_:{}, date_local_:{}, date_utc_:{}".format(date_, date_local_, date_utc_))
-        data = {
-            'duration': float(hours_to_add),
-            'user': current_user,
-            'task': selected_task,
-            'date_created': date_utc_,
-        }
-
-        wt = WorkTime(**data)
-        session.add(wt)
-        session.commit()
-
-        url_ = "/worktime/edit/?id={}".format(wt.id)
-        url_ = quote(url_, safe='/?&=+')
-        return redirect(url_)
+        return redirect(redirect_url)
 
     @flask_admin.expose('/add_a_working_claim_time_slot', methods=('GET', ))
     @protect
@@ -281,39 +301,13 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         if not flask_login.current_user.is_authenticated:
             return redirect(url_for('.login'))
 
-        session = MODELS_GLOBAL_CONTEXT['session']
+        redirect_url = self.__get_working_time_edit_form_url(
+            session=MODELS_GLOBAL_CONTEXT['session'],
+            request_args=request.args,
+            model='Claim',
+        )
 
-        if request.args.get('id') is not None:
-            id_ = request.args['id']
-            selected_claim = session.query(Claim).filter(Claim.id == id_).first()
-            hours_to_add = 0
-            date_ = datetime.now().date().isoformat()
-        else:
-            selected_claim_name = request.args.get('selected_task').split('::')[0]
-            selected_claim = session.query(Claim).filter(Claim.name == selected_claim_name).first()
-            hours_to_add = request.args.get('hours_to_add')
-            date_ = request.args.get('date')
-
-        current_user = session.query(User).filter(User.id == flask_login.current_user.id).first()
-
-        toks = [int(i) for i in date_.split('-')] + [9, 0]
-        date_local_ = datetime(*toks)
-        date_utc_ = date_local_ + timedelta(seconds=time.timezone)
-        logging.warning("date_:{}, date_local_:{}, date_utc_:{}".format(date_, date_local_, date_utc_))
-        data = {
-            'duration': float(hours_to_add),
-            'user': current_user,
-            'claim': selected_claim,
-            'date_created': date_utc_,
-        }
-
-        wt = WorkTimeClaim(**data)
-        session.add(wt)
-        session.commit()
-
-        url_ = "/worktimeclaim/edit/?id={}".format(wt.id)
-        url_ = quote(url_, safe='/?&=+')
-        return redirect(url_)
+        return redirect(redirect_url)
 
     @flask_admin.expose('/report', methods=('GET', 'POST'))
     @protect
