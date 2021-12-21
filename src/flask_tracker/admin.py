@@ -124,9 +124,13 @@ class LoginForm(form.Form):
 class TrackerAdminResources(flask_admin.AdminIndexView):
 
     @staticmethod
-    def __get_working_time_edit_form_url(session, request_args, model='Task'):
+    def __get_working_time_edit_form_url(request_args, model='Task'):
+        session = MODELS_GLOBAL_CONTEXT['session']
         model_klass = eval(model)   #pylint: disable=eval-used
         id_ = request_args.get('id', None)
+
+        if model not in ('Task', 'Claim'):
+            pass
 
         if id_ is not None:
             selected_model = session.query(model_klass).filter(model_klass.id == id_).first()
@@ -288,7 +292,6 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             return redirect(url_for('.login'))
 
         redirect_url = self.__get_working_time_edit_form_url(
-            session=MODELS_GLOBAL_CONTEXT['session'],
             request_args=request.args,
         )
 
@@ -302,7 +305,6 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
             return redirect(url_for('.login'))
 
         redirect_url = self.__get_working_time_edit_form_url(
-            session=MODELS_GLOBAL_CONTEXT['session'],
             request_args=request.args,
             model='Claim',
         )
