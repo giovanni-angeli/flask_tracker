@@ -424,6 +424,14 @@ class WorkTime(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-publi
     duration = db.Column(db.Float, default=0.00, doc='hours')
 
 
+class WorkTimeClaim(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
+
+    db = MODELS_GLOBAL_CONTEXT['db']
+    claim_id = db.Column(db.Unicode, db.ForeignKey('claim.id'))
+    user_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
+    duration = db.Column(db.Float, default=0.00, doc='hours')
+
+
 class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
@@ -434,6 +442,7 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     cost_per_hour = db.Column(db.Float, default=0.00, doc='cost per hour in arbitrary unit')
 
     worktimes = db.relationship('WorkTime', backref='user')
+    worktimes_claim = db.relationship('WorkTimeClaim', backref='user')
 
     assigned_tasks = db.relationship('Task', backref='assignee')
 
@@ -562,6 +571,8 @@ class Claim(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-me
     attachments = db.relationship('Attachment', backref='claimed')
     modifications = db.relationship('History', backref='claim')
     followers = db.relationship('User', secondary=claimings, backref='claimed')
+
+    worktimes_claim = db.relationship('WorkTimeClaim', backref='claim')
 
 
 class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-methods

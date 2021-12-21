@@ -5,7 +5,7 @@ import logging
 from flask import (Blueprint, flash, redirect, render_template, request, url_for, current_app)
 from flask_login import current_user
 
-from flask_tracker.admin import protect
+from flask_tracker.admin import check_login
 
 from flask_tracker.wiki.core import Processor
 from flask_tracker.wiki.forms import (EditorForm, SearchForm, URLForm)
@@ -15,7 +15,7 @@ from flask_tracker.wiki import current_wiki
 bp = Blueprint('wiki', __name__)
 
 @bp.route('/')
-@protect
+@check_login
 def home():
     page = current_wiki.get('home')
     if page:
@@ -24,7 +24,7 @@ def home():
 
 
 @bp.route('/index/')
-@protect
+@check_login
 def index():
     cntr = 0
     limit = 100 
@@ -41,14 +41,14 @@ def index():
 
 
 @bp.route('/<path:url>/')
-@protect
+@check_login
 def display(url):
     page = current_wiki.get_or_404(url)
     return render_template('page.html', page=page)
 
 
 @bp.route('/clone/<path:url>/', methods=['GET', 'POST'])
-@protect
+@check_login
 def clone(url):
 
     page = current_wiki.get_or_404(url)
@@ -64,7 +64,7 @@ def clone(url):
 
 
 @bp.route('/create/', methods=['GET', 'POST'])
-@protect
+@check_login
 def create():
     form = URLForm()
     if form.validate_on_submit():
@@ -74,7 +74,7 @@ def create():
 
 
 @bp.route('/edit/<path:url>/', methods=['GET', 'POST'])
-@protect
+@check_login
 def edit(url):
     page = current_wiki.get(url)
     form = EditorForm(obj=page)
@@ -89,7 +89,7 @@ def edit(url):
 
 
 @bp.route('/preview/', methods=['POST'])
-@protect
+@check_login
 def preview():
     data = {}
     processor = Processor(request.form['body'])
@@ -98,7 +98,7 @@ def preview():
 
 
 @bp.route('/rename/<path:url>/', methods=['GET', 'POST'])
-@protect
+@check_login
 def rename(url):
     page = current_wiki.get_or_404(url)
     form = URLForm(obj=page)
@@ -111,7 +111,7 @@ def rename(url):
 
 
 @bp.route('/delete/<path:url>/')
-@protect
+@check_login
 def delete(url):
     page = current_wiki.get_or_404(url)
     current_wiki.delete(url)
@@ -120,14 +120,14 @@ def delete(url):
 
 
 @bp.route('/tags/')
-@protect
+@check_login
 def tags():
     tags = current_wiki.get_tags()
     return render_template('tags.html', tags=tags)
 
 
 @bp.route('/tag/<string:name>/')
-@protect
+@check_login
 def tag(name):
 
     tagged = [p for p in current_wiki.index_by_tag(name)]
@@ -136,7 +136,7 @@ def tag(name):
 
 
 @bp.route('/search/', methods=['GET', 'POST'])
-@protect
+@check_login
 def search():
     form = SearchForm()
     if form.validate_on_submit():

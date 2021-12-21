@@ -2,6 +2,7 @@
 
 # pylint: disable=missing-docstring
 # pylint: disable=logging-format-interpolation
+# pylint: disable=consider-using-f-string
 # pylint: disable=line-too-long
 # pylint: disable=invalid-name
 # pylint: disable=too-many-arguments
@@ -35,6 +36,7 @@ from flask_tracker.models import (
     Order,
     User,
     WorkTime,
+    WorkTimeClaim,
     Attachment,
     History,
     Claim,
@@ -82,7 +84,7 @@ def compile_filtered_url(model_name, filters):
     return url_
 
 
-def protect(f):
+def check_login(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not flask_login.current_user.is_authenticated:
@@ -121,10 +123,57 @@ class LoginForm(form.Form):
 
 class TrackerAdminResources(flask_admin.AdminIndexView):
 
+    @staticmethod
+    def __get_working_time_edit_form_url(request_args, model='Task'):
+        session = MODELS_GLOBAL_CONTEXT['session']
+        model_klass = eval(model)   #pylint: disable=eval-used
+        id_ = request_args.get('id', None)
+
+        if id_ is not None:
+            selected_model = session.query(model_klass).filter(model_klass.id == id_).first()
+            hours_to_add = 0
+            date_ = datetime.now().date().isoformat()
+        else:
+            selected_task_name = request_args.get('selected_task').split('::')[0]
+            selected_model = session.query(Task).filter(Task.name == selected_task_name).first()
+            hours_to_add = request_args.get('hours_to_add')
+            date_ = request_args.get('date')
+
+        current_user = session.query(User).filter(User.id == flask_login.current_user.id).first()
+
+        toks = [int(i) for i in date_.split('-')] + [9, 0]
+        date_local_ = datetime(*toks)
+        date_utc_ = date_local_ + timedelta(seconds=time.timezone)
+        logging.warning("date_:{}, date_local_:{}, date_utc_:{}".format(date_, date_local_, date_utc_))
+
+        data = {
+            'duration': float(hours_to_add),
+            'user': current_user,
+            'date_created': date_utc_,
+            model.lower(): selected_model,
+        }
+        # logging.warning(f'data > {data}')
+
+        worktime_map = {
+            'Task' : (WorkTime, 'worktime'),
+            'Claim' : (WorkTimeClaim, 'worktimeclaim'),
+        }
+
+        wt_cls = worktime_map.get(model)[0]
+        wt = wt_cls(**data)
+        session.add(wt)
+        session.commit()
+
+        wt_url = worktime_map.get(model)[1]
+        url_ = "/{1}/edit/?id={0}".format(wt.id, wt_url)
+        url_ = quote(url_, safe='/?&=+')
+
+        return url_
+
     @flask_admin.expose("/")
     @flask_admin.expose("/home")
     @flask_admin.expose("/index")
-    @protect
+    @check_login
     def index(self, ):
 
         # ~ t0 = time.time()
@@ -224,7 +273,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
 
         self._template_args['form'] = form_
 
-        return super(TrackerAdminResources, self).index()
+        return super().index()
 
     @flask_admin.expose('/logout/')
     def logout(self):  # pylint: disable=no-self-use
@@ -233,48 +282,28 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return redirect(url_for('.index'))
 
     @flask_admin.expose('/add_a_working_time_slot', methods=('GET', ))
-    @protect
+    @check_login
     def add_a_working_time_slot(self):    # pylint: disable=no-self-use
 
-        if not flask_login.current_user.is_authenticated:
-            return redirect(url_for('.login'))
+        redirect_url = self.__get_working_time_edit_form_url(
+            request_args=request.args,
+        )
 
-        session = MODELS_GLOBAL_CONTEXT['session']
+        return redirect(redirect_url)
 
-        if request.args.get('id') is not None:
-            id_ = request.args['id']
-            selected_task = session.query(Task).filter(Task.id == id_).first()
-            hours_to_add = 0
-            date_ = datetime.now().date().isoformat()
-        else:
-            selected_task_name = request.args.get('selected_task').split('::')[0]
-            selected_task = session.query(Task).filter(Task.name == selected_task_name).first()
-            hours_to_add = request.args.get('hours_to_add')
-            date_ = request.args.get('date')
+    @flask_admin.expose('/add_a_working_claim_time_slot', methods=('GET', ))
+    @check_login
+    def add_a_working_claim_time_slot(self):    # pylint: disable=no-self-use
 
-        current_user = session.query(User).filter(User.id == flask_login.current_user.id).first()
+        redirect_url = self.__get_working_time_edit_form_url(
+            request_args=request.args,
+            model='Claim',
+        )
 
-        toks = [int(i) for i in date_.split('-')] + [9, 0]
-        date_local_ = datetime(*toks)
-        date_utc_ = date_local_ + timedelta(seconds=time.timezone)
-        logging.warning("date_:{}, date_local_:{}, date_utc_:{}".format(date_, date_local_, date_utc_))
-        data = {
-            'duration': float(hours_to_add),
-            'user': current_user,
-            'task': selected_task,
-            'date_created': date_utc_,
-        }
-
-        wt = WorkTime(**data)
-        session.add(wt)
-        session.commit()
-
-        url_ = "/worktime/edit/?id={}".format(wt.id)
-        url_ = quote(url_, safe='/?&=+')
-        return redirect(url_)
+        return redirect(redirect_url)
 
     @flask_admin.expose('/report', methods=('GET', 'POST'))
-    @protect
+    @check_login
     def report_query(self):
 
         session = MODELS_GLOBAL_CONTEXT['session']
@@ -311,7 +340,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return ret
 
     @flask_admin.expose('/filtered_view', methods=('GET', 'POST'))
-    @protect
+    @check_login
     def filtered_view(self):          # pylint: disable=no-self-use
 
         filters = []
@@ -335,7 +364,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return redirect(url_)
 
     @flask_admin.expose('/markdown_to_html', methods=('POST', ))
-    @protect
+    @check_login
     def markdown_to_html(self):          # pylint: disable=no-self-use
 
         try:
@@ -353,7 +382,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return ret
 
     @flask_admin.expose('/view_hours_of_week', methods=('GET', ))
-    @protect
+    @check_login
     def view_hours_of_week(self, ):          # pylint: disable=no-self-use
         # ~ logging.warning("request.args:{}".format(request.args))
         # ~ flash("request.args:{}".format(request.args))
@@ -375,7 +404,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return redirect(url_)
 
     @flask_admin.expose('/task_search/<string:key>/', methods=('GET', ))
-    @protect
+    @check_login
     def task_search(self, key):          # pylint: disable=no-self-use
         url_ = "/task/?search={}".format(key)
         return redirect(url_)
@@ -414,6 +443,7 @@ def init_admin(app, db):
     admin_.add_view(HistoryView(History, db.session, category="admin"))    # pylint: disable=undefined-variable
     admin_.add_view(UserView(User, db.session, category="admin"))    # pylint: disable=undefined-variable
     admin_.add_view(WorkTimeView(WorkTime, db.session, category="admin"))    # pylint: disable=undefined-variable
+    admin_.add_view(WorkTimeClaimView(WorkTimeClaim, db.session, category="admin")) # pylint: disable=undefined-variable
 
     admin_.add_link(MenuLink(name='Wiki', url='/wiki/'))
 
