@@ -84,7 +84,7 @@ def compile_filtered_url(model_name, filters):
     return url_
 
 
-def protect(f):
+def check_login(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not flask_login.current_user.is_authenticated:
@@ -173,7 +173,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
     @flask_admin.expose("/")
     @flask_admin.expose("/home")
     @flask_admin.expose("/index")
-    @protect
+    @check_login
     def index(self, ):
 
         # ~ t0 = time.time()
@@ -282,11 +282,8 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return redirect(url_for('.index'))
 
     @flask_admin.expose('/add_a_working_time_slot', methods=('GET', ))
-    @protect
+    @check_login
     def add_a_working_time_slot(self):    # pylint: disable=no-self-use
-
-        if not flask_login.current_user.is_authenticated:
-            return redirect(url_for('.login'))
 
         redirect_url = self.__get_working_time_edit_form_url(
             request_args=request.args,
@@ -295,11 +292,8 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return redirect(redirect_url)
 
     @flask_admin.expose('/add_a_working_claim_time_slot', methods=('GET', ))
-    @protect
+    @check_login
     def add_a_working_claim_time_slot(self):    # pylint: disable=no-self-use
-
-        if not flask_login.current_user.is_authenticated:
-            return redirect(url_for('.login'))
 
         redirect_url = self.__get_working_time_edit_form_url(
             request_args=request.args,
@@ -309,7 +303,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return redirect(redirect_url)
 
     @flask_admin.expose('/report', methods=('GET', 'POST'))
-    @protect
+    @check_login
     def report_query(self):
 
         session = MODELS_GLOBAL_CONTEXT['session']
@@ -346,7 +340,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return ret
 
     @flask_admin.expose('/filtered_view', methods=('GET', 'POST'))
-    @protect
+    @check_login
     def filtered_view(self):          # pylint: disable=no-self-use
 
         filters = []
@@ -370,7 +364,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return redirect(url_)
 
     @flask_admin.expose('/markdown_to_html', methods=('POST', ))
-    @protect
+    @check_login
     def markdown_to_html(self):          # pylint: disable=no-self-use
 
         try:
@@ -388,7 +382,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return ret
 
     @flask_admin.expose('/view_hours_of_week', methods=('GET', ))
-    @protect
+    @check_login
     def view_hours_of_week(self, ):          # pylint: disable=no-self-use
         # ~ logging.warning("request.args:{}".format(request.args))
         # ~ flash("request.args:{}".format(request.args))
@@ -410,7 +404,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return redirect(url_)
 
     @flask_admin.expose('/task_search/<string:key>/', methods=('GET', ))
-    @protect
+    @check_login
     def task_search(self, key):          # pylint: disable=no-self-use
         url_ = "/task/?search={}".format(key)
         return redirect(url_)
