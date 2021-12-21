@@ -129,9 +129,6 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         model_klass = eval(model)   #pylint: disable=eval-used
         id_ = request_args.get('id', None)
 
-        if model not in ('Task', 'Claim'):
-            pass
-
         if id_ is not None:
             selected_model = session.query(model_klass).filter(model_klass.id == id_).first()
             hours_to_add = 0
