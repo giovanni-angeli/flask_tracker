@@ -49,6 +49,7 @@ def slugify(text):
 
     return re.sub(r'[\W_]+', '-', text)
 
+
 def has_capabilities(app, user, table_name, operation='*'):
 
     role = user.role
@@ -175,6 +176,80 @@ def _display_time_to_local_tz(cls, context, obj, name):   # pylint: disable=unus
 def _display_description(cls, context, obj, name):   # pylint: disable=unused-argument,no-self-use
     value = getattr(obj, name)
     return Markup(value)
+
+
+def _colorize_diffs(diff):
+    # adapted from https://github.com/kilink/ghdiff
+    import six
+    import xml.sax.saxutils
+
+    def escape(text):
+        return xml.sax.saxutils.escape(text, {" ": "&nbsp;"})
+
+    def _colorize(diff):
+        if isinstance(diff, six.string_types):
+            lines = diff.splitlines()
+        else:
+            lines = diff
+        lines.reverse()
+        while lines and not lines[-1].startswith("@@"):
+            lines.pop()
+        yield '<div class="diff">'
+        while lines:
+            line = lines.pop()
+            klass = ""
+            if line.startswith("@@"):
+                klass = "control"
+            elif line.startswith("-"):
+                klass = "delete"
+            elif line.startswith("+"):
+                klass = "insert"
+            yield '<div class="%s">%s</div>' % (klass, escape(line),)
+        yield "</div>"
+
+
+    def _line_diff(a, b):
+        aline = []
+        bline = []
+        for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(a=a, b=b).get_opcodes():
+            if tag == "equal":
+                aline.append(escape(a[i1:i2]))
+                bline.append(escape(b[j1:j2]))
+                continue
+        return "".join(aline), "".join(bline)
+
+    default_css = """\
+        <style type="text/css">
+            .diff {
+                border: 1px solid #cccccc;
+                background: none repeat scroll 0 0 #f8f8f8;
+                font-family: 'Bitstream Vera Sans Mono','Courier',monospace;
+                font-size: 12px;
+                line-height: 1.4;
+                white-space: normal;
+                word-wrap: break-word;
+                width: 1025px !important;
+            }
+            .diff div:hover {
+                background-color:#ffc;
+            }
+            .diff .control {
+                background-color: #eaf2f5;
+                color: #999999;
+            }
+            .diff .insert {
+                background-color: #ddffdd;
+                color: #000000;
+            }
+            .diff .delete {
+                background-color: #ffdddd;
+                color: #000000;
+            }
+        </style>
+        """
+    diff = diff.replace('<br/>', '')
+    colorized_diff =  default_css + "\n".join(_colorize(diff))
+    return colorized_diff
 
 
 def define_view_classes(current_app):  # pylint: disable=too-many-statements
@@ -1129,10 +1204,14 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             ret = value
             try:
                 value = json.loads(value)
+                for i in range(len(value)):
+                    if value[i][0] == 'content':
+                        value[i][1] =_colorize_diffs(value[i][1])
+
                 LINE_FMTR = ''
                 LINE_FMTR += '<tr><td class="col-md-1">{}</td><td class="col-md-8">{}</td></tr>'
                 html_ = ""
-                html_ += '<table class="table table-striped table-bordered">'
+                html_ += '<table class="table table-striped table-bordered" style="width: 1025px !important;>'
                 html_ += '<tr><td colspan="2" class="col-md-9"></td></tr>'
                 html_ += "".join([LINE_FMTR.format(k, v) for (k, v) in value])
                 html_ += "</table>"
