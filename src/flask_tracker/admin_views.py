@@ -128,22 +128,27 @@ def _handle_item_modification(form_, item, current_app):     # pylint: disable=n
             'description': json.dumps(modifications, indent=2)
         }
         logging.warning(json.dumps(args, indent=2))
+        history_obj = None
 
         if hasattr(History, '{}_id'.format(item.__tablename__)):
 
             session = MODELS_GLOBAL_CONTEXT['session']
-            session.add(History(**args))
+            history_obj = History(**args)
+            session.add(history_obj)
 
         if hasattr(item, 'followers') and item.followers:
-
+            session.flush()
             msg_subject = "[FT Notify] - {}: {} modified".format(item.__tablename__, item.name)
             msg_body = json.dumps({
                 item.__tablename__: item.name,
                 'user': flask_login.current_user.name,
-                'modifications': modifications
+                'direct url':"http://{}:{}/history/details/?id={}&url=%2Fhistory%2F".format(
+                    current_app.config.get("HOST"),
+                    current_app.config.get("PORT"),
+                    history_obj.id)
             }, indent=2)
             msg_recipients = [follower.email for follower in item.followers]
-
+            # logging.warning(f'msg_body > {msg_body}')
             email_client = getattr(current_app, 'email_client_tracker')
             if email_client:
                 t0 = time.time()
@@ -1206,7 +1211,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 value = json.loads(value)
                 for i in range(len(value)):
                     if value[i][0] == 'content':
-                        value[i][1] =_colorize_diffs(value[i][1])
+                        value[i][1] = _colorize_diffs(value[i][1])
 
                 LINE_FMTR = ''
                 LINE_FMTR += '<tr><td class="col-md-1">{}</td><td class="col-md-8">{}</td></tr>'
