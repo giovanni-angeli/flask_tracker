@@ -209,19 +209,8 @@ def _colorize_diffs(diff):
                 klass = "delete"
             elif line.startswith("+"):
                 klass = "insert"
-            yield '<div class="%s">%s</div>' % (klass, escape(line),)
+            yield '<div class="%s">%s</div>' % (klass, line,)
         yield "</div>"
-
-
-    def _line_diff(a, b):
-        aline = []
-        bline = []
-        for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(a=a, b=b).get_opcodes():
-            if tag == "equal":
-                aline.append(escape(a[i1:i2]))
-                bline.append(escape(b[j1:j2]))
-                continue
-        return "".join(aline), "".join(bline)
 
     default_css = """\
         <style type="text/css">
@@ -252,7 +241,7 @@ def _colorize_diffs(diff):
             }
         </style>
         """
-    diff = diff.replace('<br/>', '')
+    diff = diff.replace('<br/>', '\n')
     colorized_diff =  default_css + "\n".join(_colorize(diff))
     return colorized_diff
 
