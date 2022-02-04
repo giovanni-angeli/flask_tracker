@@ -541,7 +541,7 @@ class Task(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-met
     worktimes = db.relationship('WorkTime', backref='task')
 
     attachments = db.relationship('Attachment', backref='attached')
-    modifications = db.relationship('History', backref='task')
+    modifications = db.relationship('History', backref='task', cascade="all, delete-orphan")
     followers = db.relationship('User', secondary=followings, backref='followed')
 
 
@@ -569,7 +569,7 @@ class Claim(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-me
     owner_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
 
     attachments = db.relationship('Attachment', backref='claimed')
-    modifications = db.relationship('History', backref='claim')
+    modifications = db.relationship('History', backref='claim', cascade="all, delete-orphan")
     followers = db.relationship('User', secondary=claimings, backref='claimed')
 
     worktimes_claim = db.relationship('WorkTimeClaim', backref='claim')
