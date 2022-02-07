@@ -49,6 +49,7 @@ def slugify(text):
 
     return re.sub(r'[\W_]+', '-', text)
 
+
 def has_capabilities(app, user, table_name, operation='*'):
 
     role = user.role
@@ -127,22 +128,27 @@ def _handle_item_modification(form_, item, current_app):     # pylint: disable=n
             'description': json.dumps(modifications, indent=2)
         }
         logging.warning(json.dumps(args, indent=2))
+        history_obj = None
 
         if hasattr(History, '{}_id'.format(item.__tablename__)):
 
             session = MODELS_GLOBAL_CONTEXT['session']
-            session.add(History(**args))
+            history_obj = History(**args)
+            session.add(history_obj)
 
         if hasattr(item, 'followers') and item.followers:
-
+            session.flush()
             msg_subject = "[FT Notify] - {}: {} modified".format(item.__tablename__, item.name)
             msg_body = json.dumps({
                 item.__tablename__: item.name,
                 'user': flask_login.current_user.name,
-                'modifications': modifications
+                'direct url':"http://{}:{}/history/details/?id={}&url=%2Fhistory%2F".format(
+                    current_app.config.get("HOST"),
+                    current_app.config.get("PORT"),
+                    history_obj.id)
             }, indent=2)
             msg_recipients = [follower.email for follower in item.followers]
-
+            # logging.warning(f'msg_body > {msg_body}')
             email_client = getattr(current_app, 'email_client_tracker')
             if email_client:
                 t0 = time.time()
@@ -175,6 +181,69 @@ def _display_time_to_local_tz(cls, context, obj, name):   # pylint: disable=unus
 def _display_description(cls, context, obj, name):   # pylint: disable=unused-argument,no-self-use
     value = getattr(obj, name)
     return Markup(value)
+
+
+def _colorize_diffs(diff):
+    # adapted from https://github.com/kilink/ghdiff
+    import six
+    import xml.sax.saxutils
+
+    def escape(text):
+        return xml.sax.saxutils.escape(text, {" ": "&nbsp;"})
+
+    def _colorize(diff):
+        if isinstance(diff, six.string_types):
+            lines = diff.splitlines()
+        else:
+            lines = diff
+        lines.reverse()
+        while lines and not lines[-1].startswith("@@"):
+            lines.pop()
+        yield '<div class="diff">'
+        while lines:
+            line = lines.pop()
+            klass = ""
+            if line.startswith("@@"):
+                klass = "control"
+            elif line.startswith("-"):
+                klass = "delete"
+            elif line.startswith("+"):
+                klass = "insert"
+            yield '<div class="%s">%s</div>' % (klass, line,)
+        yield "</div>"
+
+    default_css = """\
+        <style type="text/css">
+            .diff {
+                border: 1px solid #cccccc;
+                background: none repeat scroll 0 0 #f8f8f8;
+                font-family: 'Bitstream Vera Sans Mono','Courier',monospace;
+                font-size: 12px;
+                line-height: 1.4;
+                white-space: normal;
+                word-wrap: break-word;
+                width: 1025px !important;
+            }
+            .diff div:hover {
+                background-color:#ffc;
+            }
+            .diff .control {
+                background-color: #eaf2f5;
+                color: #999999;
+            }
+            .diff .insert {
+                background-color: #ddffdd;
+                color: #000000;
+            }
+            .diff .delete {
+                background-color: #ffdddd;
+                color: #000000;
+            }
+        </style>
+        """
+    diff = diff.replace('<br/>', '\n')
+    colorized_diff =  default_css + "\n".join(_colorize(diff))
+    return colorized_diff
 
 
 def define_view_classes(current_app):  # pylint: disable=too-many-statements
@@ -1129,10 +1198,14 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             ret = value
             try:
                 value = json.loads(value)
+                for i in range(len(value)):
+                    if value[i][0] == 'content':
+                        value[i][1] = _colorize_diffs(value[i][1])
+
                 LINE_FMTR = ''
                 LINE_FMTR += '<tr><td class="col-md-1">{}</td><td class="col-md-8">{}</td></tr>'
                 html_ = ""
-                html_ += '<table class="table table-striped table-bordered">'
+                html_ += '<table class="table table-striped table-bordered" style="width: 1025px !important;>'
                 html_ += '<tr><td colspan="2" class="col-md-9"></td></tr>'
                 html_ += "".join([LINE_FMTR.format(k, v) for (k, v) in value])
                 html_ += "</table>"
