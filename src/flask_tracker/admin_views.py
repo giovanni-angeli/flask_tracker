@@ -138,12 +138,19 @@ def _handle_item_modification(form_, item, current_app):     # pylint: disable=n
 
         if hasattr(item, 'followers') and item.followers:
             session.flush()
+            svr_ip = current_app.config.get("HOST")
+            if current_app.config.get("IPV4_BY_HOSTNAME", False):
+                # Translate a host name to IPv4 address format
+                import socket
+                hostname = socket.gethostname()
+                svr_ip = socket.gethostbyname(hostname)
+
             msg_subject = "[FT Notify] - {}: {} modified".format(item.__tablename__, item.name)
             msg_body = json.dumps({
                 item.__tablename__: item.name,
                 'user': flask_login.current_user.name,
                 'direct url':"http://{}:{}/history/details/?id={}&url=%2Fhistory%2F".format(
-                    current_app.config.get("HOST"),
+                    svr_ip,
                     current_app.config.get("PORT"),
                     history_obj.id)
             }, indent=2)
