@@ -108,7 +108,9 @@ def _handle_item_modification(form_, item, current_app):     # pylint: disable=n
 
             if a != b:
                 if k == 'content':
-                    b = difflib.unified_diff(b.split('\n'), a.split('\n'), n=2,
+                    b_ = '' if b is None else b.split('\n')
+                    a_ = '' if a is None else a.split('\n')
+                    b = difflib.unified_diff(b_, a_, n=2,
                                              fromfile='before', tofile='after', fromfiledate=time.asctime())
                     b = Markup("<br/>".join(b))
                 elif deflt_:
@@ -129,6 +131,7 @@ def _handle_item_modification(form_, item, current_app):     # pylint: disable=n
         }
         logging.warning(json.dumps(args, indent=2))
         history_obj = None
+        session = None
 
         if hasattr(History, '{}_id'.format(item.__tablename__)):
 
@@ -137,7 +140,8 @@ def _handle_item_modification(form_, item, current_app):     # pylint: disable=n
             session.add(history_obj)
 
         if hasattr(item, 'followers') and item.followers:
-            session.flush()
+            if session:
+                session.flush()
             svr_ip = current_app.config.get("HOST")
             if current_app.config.get("IPV4_BY_HOSTNAME", False):
                 # Translate a host name to IPv4 address format
@@ -611,10 +615,12 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 'NOTE: you can use <a target="blank_" href="https://daringfireball.net/projects/markdown/syntax">Markdown syntax</a>. Use preview button to see what you get.')
 
             form_.content = fields.TextAreaField(
-                'content', [
-                    validators.optional(), validators.length(
-                        max=ItemBase.content_max_len)], description=cnt_description, render_kw={
-                            "style": "background:#fff; border:dashed #DD3333 1px; height:480px;"})
+                'content',
+                [validators.optional(), validators.length(max=ItemBase.content_max_len)],
+                description=cnt_description,
+                render_kw={
+                    "style": "background:#fff; border:dashed #DD3333 1px; height:480px;"},
+            )
 
             form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={})
 
@@ -635,14 +641,26 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
             session = MODELS_GLOBAL_CONTEXT['session']
 
+            map_model_attribute = {
+                'improvement': 'assignee',
+                'task': 'assignee',
+                'claim': 'owner',
+            }
+
             if is_created:
                 if not (hasattr(form_, 'created_by') and form_.created_by and form_.created_by.data):
                     obj.created_by = flask_login.current_user.name
-                if hasattr(obj, 'assignee') and not (hasattr(form_, 'assignee')
-                                                     and form_.assignee and form_.assignee.data):
-                    obj.assignee = session.query(User).filter(User.name == 'anonymous').first()
-                if hasattr(obj, 'owner') and not (hasattr(form_, 'owner') and form_.owner and form_.owner.data):
-                    obj.owner = session.query(User).filter(User.name == 'anonymous').first()
+
+                obj_attr = map_model_attribute.get(obj.__tablename__)
+                if hasattr(obj, obj_attr):
+                    form_attr = getattr(form_, obj_attr, None)
+                    if hasattr(form_, obj_attr) and form_attr and getattr(form_attr, 'data', None):
+                        usrname = getattr(form_attr, 'data', 'anonymous')
+                        usr = session.query(User).filter(User.name == str(usrname)).first()
+                        setattr(obj, obj_attr, usr)
+                    else:
+                        anon_usr = session.query(User).filter(User.name == 'anonymous').first()
+                        setattr(obj, obj_attr, anon_usr)
 
             if hasattr(obj, 'parent') and obj == obj.parent:
                 obj.parent = None
@@ -657,10 +675,10 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                         msg = 'task {} must have a known assignee, to be {}.'.format(obj.name, next_)
                         raise validators.ValidationError(msg)
 
-            if not is_created:
-                _handle_item_modification(form_, obj, current_app)
+            # if not is_created:
+            _handle_item_modification(form_, obj, current_app)
 
-            ret = super().on_model_change(form, obj, is_created)
+            ret = super().on_model_change(form_, obj, is_created)
 
             return ret
 
@@ -1064,6 +1082,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
         column_list = (
             'name',
+            'id_short',
             'description',
             'status',
             'priority',
@@ -1089,6 +1108,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'date_created',
             'date_modified',
             'name',
+            'id_short',
             'description',
             'status',
             'priority',
@@ -1136,13 +1156,11 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             form_ = super().get_create_form()
 
             form_.content = fields.TextAreaField(
-                'content', [
-                    validators.optional(),
-                    validators.length(
-                        max=ItemBase.content_max_len)
-                    ],
+                'content',
+                [validators.optional(), validators.length(max=ItemBase.content_max_len)],
+                default="",
                 render_kw={
-                    "style": "background:#fff; border:dashed #DD3333 1px; height:480px;"}
+                    "style": "background:#fff; border:dashed #DD3333 1px; height:480px;"},
             )
 
             return form_
@@ -1159,6 +1177,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'date_created',
             ('claim', ('claim.name')),
             ('task', ('task.name')),
+            ('improvement', ('improvement.name')),
         )
 
         column_searchable_list = (
@@ -1166,6 +1185,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'task.name',
             'claim.id',
             'claim.name',
+            'improvement.id',
+            'improvement.name',
             'user.name',
             'description',
         )
@@ -1175,6 +1196,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'date_created',
             'task.name',
             'claim.name',
+            'improvement.name',
             'user.name',
         )
 
@@ -1182,6 +1204,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             # ~ 'name',
             'task',
             'claim',
+            'improvement',
             'user',
             'date_created',
             'description',
@@ -1225,6 +1248,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         column_formatters.update({
             'task': display_item,
             'claim': display_item,
+            'improvement': display_item,
             'description': display_modifications,
         })
 
