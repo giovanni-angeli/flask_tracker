@@ -492,6 +492,7 @@ class History(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-public
 
     task_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
     claim_id = db.Column(db.Unicode, db.ForeignKey('claim.id'))
+    improvement_id = db.Column(db.Unicode, db.ForeignKey('improvement.id'))
 
 
 class ItemBase(NamedModel):     # pylint: disable=too-few-public-methods
@@ -589,7 +590,7 @@ class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-pub
     market_potential = db.Column(db.Unicode(), default='')
     target_department = db.Column(db.Unicode(), default='')
 
-    content = db.Column(db.Unicode(5 * 1024), default='')
+    content = db.Column(db.Unicode(ItemBase.content_max_len), default='')
     estimated_resources = db.Column(db.Unicode(), default='')
     estimated_time_steps = db.Column(db.Unicode(), default='')
     notes = db.Column(db.Unicode(), default='')
@@ -600,6 +601,7 @@ class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-pub
     assignee_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
     # notifier_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
     followers = db.relationship('User', secondary=notifyings, backref='notified')
+    modifications = db.relationship('History', backref='improvement', cascade="all, delete-orphan")
 
 
 def do_delete_pending_objects(session, flush_context, instances=None):  # pylint: disable=unused-argument
