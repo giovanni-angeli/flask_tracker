@@ -41,6 +41,7 @@ from flask_tracker.models import (
     History,
     Claim,
     Improvement,
+    Registry,
     MODELS_GLOBAL_CONTEXT,
     get_package_version)
 
@@ -438,6 +439,7 @@ def init_admin(app, db):
     admin_.add_view(ClaimView(Claim, db.session))               # pylint: disable=undefined-variable
 
     admin_.add_view(ImprovementView(Improvement, db.session))               # pylint: disable=undefined-variable
+    admin_.add_view(RegistryView(Registry, db.session))               # pylint: disable=undefined-variable
 
     admin_.add_view(TrackerModelView(Customer, db.session, category="admin"))    # pylint: disable=undefined-variable
     admin_.add_view(HistoryView(History, db.session, category="admin"))    # pylint: disable=undefined-variable

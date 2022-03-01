@@ -377,6 +377,7 @@ class Customer(NamedModel, sqlalchemy_Model):   # pylint: disable=too-few-public
     orders = db.relationship('Order', backref='customer')
     claims = db.relationship('Claim', backref='customer')
     improvements = db.relationship('Improvement', backref='customer')
+    registers = db.relationship('Registry', backref='customer')
 
 
 class Order(NamedModel, sqlalchemy_Model):    # pylint: disable=too-few-public-methods
@@ -602,6 +603,17 @@ class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-pub
     # notifier_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
     followers = db.relationship('User', secondary=notifyings, backref='notified')
     modifications = db.relationship('History', backref='improvement', cascade="all, delete-orphan")
+
+
+class Registry(BaseModel, sqlalchemy_Model):
+    db = MODELS_GLOBAL_CONTEXT['db']
+
+    sn = db.Column(db.Unicode(64), nullable=False, unique=True, index=True)
+    customer_id = db.Column(db.Unicode, db.ForeignKey('customer.id'))
+    json_info = sqlalchemy_db_.Column(
+        sqlalchemy_db_.UnicodeText,
+        default='{}',
+    )
 
 
 def do_delete_pending_objects(session, flush_context, instances=None):  # pylint: disable=unused-argument

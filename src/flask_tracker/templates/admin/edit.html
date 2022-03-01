@@ -1,91 +1,103 @@
 {% extends 'admin/model/edit.html' %}
 
+{% block head %}
+  {{ super() }}
+  <script type="text/javascript" src="{{ url_for('static', filename='jsoneditor.js') }}"></script>
+{% endblock %}
+
 {% block brand %}
     <h4 id="brand" style="width:200px"> * {{ admin_view.name|capitalize }}</h4>
     <style>.container {width: 100%;}</style>
 {% endblock %}
 
 {% block access_control %}
-{% if current_user.is_authenticated %}
-<div class="btn-group pull-right">
-    <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-        <i class="icon-user"></i> {{ current_user.login }} <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu">
-        <li><a href="{{ url_for('admin.logout') }}">Log out</a></li>
-    </ul>
-</div>
-{% endif %}
+    {% if current_user.is_authenticated %}
+    <div class="btn-group pull-right">
+        <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+            <i class="icon-user"></i> {{ current_user.login }} <span class="caret"></span>
+        </a>
+        <ul class="dropdown-menu">
+            <li><a href="{{ url_for('admin.logout') }}">Log out</a></li>
+        </ul>
+    </div>
+    {% endif %}
 {% endblock %}
 
 {{ super() }}
 
+{% block edit_form %}
+
+{% with form=form %}
+    {% include "admin/json_form.html" %}
+{% endwith %}
+
+{% endblock edit_form %}
 
 {% block tail %}
-{% if admin_view.name in ('Task', 'Claim', 'Improvement') %}
+    {% if admin_view.name in ('Task', 'Claim', 'Improvement') %}
 
-<script type="text/javascript" >
+    <script type="text/javascript" >
 
-    var g_original_content_style;
-    var refresh_preview = function(result, status, xhr) {
-        document.getElementById('content_preview').innerHTML = result.responseText;
-        document.getElementById('content_preview').hidden = false;
-        document.getElementById('content').hidden = true;
-        document.getElementById('content').style = "display:none;";
+        var g_original_content_style;
+        var refresh_preview = function(result, status, xhr) {
+            document.getElementById('content_preview').innerHTML = result.responseText;
+            document.getElementById('content_preview').hidden = false;
+            document.getElementById('content').hidden = true;
+            document.getElementById('content').style = "display:none;";
 
-        console.log("refresh_preview() g_original_content_style=" + g_original_content_style);
-    }
-
-    var preview_button_clicked = function() {
-        if (document.getElementById('content_preview').hidden) {
-            var data = {'content': document.getElementById('content').value};
-            $.ajax({
-                data: JSON.stringify(data),
-                dataType: "json",
-                success: refresh_preview,
-                error: refresh_preview,
-                contentType: "application/json",
-                timeout: 5000,
-                url: '/markdown_to_html',
-                method: 'POST'
-            });
-        } else if (document.getElementById('content').hidden) {
-            document.getElementById('content').hidden = false;
-            document.getElementById('content').style.cssText = g_original_content_style;
-            document.getElementById('content_preview').hidden = true;
+            console.log("refresh_preview() g_original_content_style=" + g_original_content_style);
         }
-        console.log("preview_button_clicked()");
-    };
 
-    var init = function() {
+        var preview_button_clicked = function() {
+            if (document.getElementById('content_preview').hidden) {
+                var data = {'content': document.getElementById('content').value};
+                $.ajax({
+                    data: JSON.stringify(data),
+                    dataType: "json",
+                    success: refresh_preview,
+                    error: refresh_preview,
+                    contentType: "application/json",
+                    timeout: 5000,
+                    url: '/markdown_to_html',
+                    method: 'POST'
+                });
+            } else if (document.getElementById('content').hidden) {
+                document.getElementById('content').hidden = false;
+                document.getElementById('content').style.cssText = g_original_content_style;
+                document.getElementById('content_preview').hidden = true;
+            }
+            console.log("preview_button_clicked()");
+        };
 
-        document.getElementById("preview_content_button").onclick = preview_button_clicked;
+        var init = function() {
 
-        var e_a = document.getElementById("formatted_attach_names");
-        var div_ = document.createElement("div");
-        div_.innerHTML = "";
-        if (e_a) {
-            e_a.value = "";
-            {% for name in model.formatted_attach_names %}
-                div_.innerHTML += '<a class="form-control" href="' + "{{url_for('attachment', filename=name)}}" + '"> [{{ name }}]({{url_for('attachment', filename=name)}}) </a> ';
-            {% endfor %}
+            document.getElementById("preview_content_button").onclick = preview_button_clicked;
+
+            var e_a = document.getElementById("formatted_attach_names");
+            var div_ = document.createElement("div");
+            div_.innerHTML = "";
+            if (e_a) {
+                e_a.value = "";
+                {% for name in model.formatted_attach_names %}
+                    div_.innerHTML += '<a class="form-control" href="' + "{{url_for('attachment', filename=name)}}" + '"> [{{ name }}]({{url_for('attachment', filename=name)}}) </a> ';
+                {% endfor %}
+            }
+            e_a.parentNode.appendChild(div_);
+            g_original_content_style = document.getElementById('content').style.cssText;
+            e = document.createElement('div')
+            e.id = 'content_preview';
+            e.hidden = true;
+            e.setAttribute("style", "background:#FFFFEE; border:dashed #333333 1px;");
+            document.getElementById('content').parentNode.appendChild(e);
+
+            console.log("init()");
         }
-        e_a.parentNode.appendChild(div_);
-        g_original_content_style = document.getElementById('content').style.cssText;
-        e = document.createElement('div')
-        e.id = 'content_preview';
-        e.hidden = true;
-        e.setAttribute("style", "background:#FFFFEE; border:dashed #333333 1px;");
-        document.getElementById('content').parentNode.appendChild(e);
 
-        console.log("init()");
-    }
+        init();
 
-    init();
+    </script>
 
-</script>
-
-{% endif %}
+    {% endif %}
 {% endblock tail %}
 
 

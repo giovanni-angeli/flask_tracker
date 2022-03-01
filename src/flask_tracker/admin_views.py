@@ -257,6 +257,33 @@ def _colorize_diffs(diff):
     return colorized_diff
 
 
+def _handle_json_schema(obj, deflt_values={}):
+
+    _schema = {}
+    _value = None
+    _error = None
+    model_name = obj.__class__.__name__.lower()
+    title = "new registry machine"
+
+    if obj is not None and model_name == 'registry':
+
+        try:
+            title = "{} machine sn: {}".format(model_name, obj.sn)
+            if obj and obj.json_info:
+                _value = json.loads(obj.json_info)
+
+        except Exception as exc:
+            logging.warning("exc: {}".format(exc))
+
+    _schema['title'] = title
+    _schema = Markup(json.dumps(_schema))
+    _value = Markup(json.dumps(_value, indent=2))
+    if deflt_values:
+        _value = Markup(deflt_values)
+
+    return _schema, _value, _error
+
+
 def define_view_classes(current_app):  # pylint: disable=too-many-statements
     """
     we define our ModelView classes inside a function, because
@@ -1336,5 +1363,56 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
             ret = super().on_model_change(form_, obj, is_created)
             return ret
+
+    class RegistryView(TrackerModelView):
+
+        column_list = (
+            'sn',
+            'customer',
+            'description',
+        )
+
+        form_excluded_columns = (
+            'date_created',
+            'date_modified',
+            'json_info',
+        )
+
+        column_labels = dict(sn='Serial Number')
+
+        def edit_form(self, *args, **kwargs):
+
+            obj = kwargs.get('obj')
+
+            schema, value, error = _handle_json_schema(obj)
+
+            form = super().edit_form(*args, **kwargs)
+
+            form.extra_args = {
+                'jsonschema': schema,
+                'jsonvalue': value,
+                'error': error, }
+
+            # logging.warning("form.extra_args:{}".format(form.extra_args))
+
+            return form
+
+        def create_form(self, *args, **kwargs):
+
+            obj = kwargs.get('obj')
+            deflt_versions = current_app.config.get('FW_SW_VERSIONS', {})
+            schema, value, error = _handle_json_schema(
+                obj=obj, deflt_values=deflt_versions)
+
+            form = super().create_form(*args, **kwargs)
+
+            form.extra_args = {
+                'jsonschema': schema,
+                'jsonvalue': value,
+                'error': error, }
+
+            # logging.warning("form.extra_args:{}".format(form.extra_args))
+
+            return form
 
     return locals()

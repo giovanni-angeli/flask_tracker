@@ -3,6 +3,7 @@
 import os
 import pathlib
 import re
+import json
 
 
 def slugify(text):
@@ -239,3 +240,11 @@ ROLE_CAPABILITY_MAP = {
     },
     'guest': {'default': 'r'},
     'suspended': {'default': ''}, }
+
+IPV4_BY_HOSTNAME = True
+
+FW_SW_VERSIONS = {}
+with (HERE / "sw_fw_versions.txt").open('r') as f:
+    data = f.read()
+    # FW_SW_VERSIONS = json.dumps(data)
+    FW_SW_VERSIONS = data
