@@ -36,7 +36,7 @@ import flask_login  # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
 from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-error
 
-from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT, ItemBase)
+from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT, ItemBase, Registry)
 
 import unidecode # pylint: disable=import-error
 
@@ -1380,7 +1380,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         # form_excluded_columns = (
         #     'date_created',
         #     'date_modified',
-        #     # 'json_info',
         # )
 
         column_searchable_list = (
@@ -1388,6 +1387,20 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             # 'customer',
             'vpn',
             'machine_model',
+            'json_info',
+        )
+
+        column_details_list = (
+            'date_created',
+            'date_modified',
+            'sn',
+            'machine_model',
+            'customer',
+            'description',
+            'vpn',
+            'computer_board',
+            'os_platform',
+            'notes',
             'json_info',
         )
 
@@ -1442,8 +1455,54 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 'jsonvalue': value,
                 'error': error, }
 
-            logging.warning("form.extra_args:{}".format(form.extra_args))
+            # logging.warning("form.extra_args:{}".format(form.extra_args))
 
             return form
+
+        def get_create_form(self):
+
+            form_ = super().get_create_form()
+
+            form_.notes = fields.TextAreaField(
+                'notes',
+                [validators.optional(), validators.length(max=Registry.content_max_len)],
+                render_kw={
+                    "style": "background:#fff; border:dashed #DD3333 1px; height:240px;"
+                },
+            )
+
+            return form_
+
+        def get_edit_form(self):
+
+            form_ = super().get_edit_form()
+
+            form_.notes = fields.TextAreaField(
+                'notes',
+                [validators.optional(), validators.length(max=Registry.content_max_len)],
+                render_kw={
+                    "style": "background:#fff; border:dashed #DD3333 1px; height:240px;"
+                },
+            )
+
+            return form_
+
+        def display_notes(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
+            value = getattr(obj, name)
+            value = markdown.markdown(value)
+            value = Markup(value)
+            return value
+
+        def display_json_info(self, context, obj, name):
+            value = getattr(obj, name)
+            value = markdown.markdown(value.replace('\n', '<br>'))
+            value = Markup(value)
+            return value 
+
+        column_formatters = TrackerModelView.column_formatters.copy()
+        column_formatters.update({
+            'notes': display_notes,
+            'json_info': display_json_info,
+        })
 
     return locals()
