@@ -606,6 +606,8 @@ class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-pub
 
 
 class Registry(BaseModel, sqlalchemy_Model):
+
+    content_max_len = 5 * 1024
     db = MODELS_GLOBAL_CONTEXT['db']
 
     sn = db.Column(db.Unicode(64), nullable=False, unique=True, index=True)
@@ -614,6 +616,11 @@ class Registry(BaseModel, sqlalchemy_Model):
         sqlalchemy_db_.UnicodeText,
         default='{}',
     )
+    machine_model = db.Column(db.Unicode(64), default='')
+    vpn = db.Column(db.Unicode(64), default='')
+    computer_board = db.Column(db.Unicode(64))
+    os_platform = db.Column(db.Unicode(64), default='')
+    notes = db.Column(db.Unicode(content_max_len), default='')
 
 
 def do_delete_pending_objects(session, flush_context, instances=None):  # pylint: disable=unused-argument

@@ -1,7 +1,8 @@
 { 
 "AlfaDesk": "N/A",
-"Alfa40": "N/A",
 "dispatcher": "N/A",
+"Alfa40": "N/A",
+"Alfa Supervisor": "N/A",
 "MAB": "N/A",
 "B1_BASE_IDX": "N/A",
 "B2_BASE_IDX": "N/A",

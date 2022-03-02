@@ -1368,15 +1368,46 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
         column_list = (
             'sn',
+            'machine_model',
             'customer',
             'description',
+            'vpn',
+            'computer_board',
+            'os_platform',
+            'notes',
         )
 
-        form_excluded_columns = (
-            'date_created',
-            'date_modified',
+        # form_excluded_columns = (
+        #     'date_created',
+        #     'date_modified',
+        #     # 'json_info',
+        # )
+
+        column_searchable_list = (
+            'sn',
+            # 'customer',
+            'vpn',
+            'machine_model',
             'json_info',
         )
+
+        form_choices = {
+            'computer_board': current_app.config.get('COMPUTER_BOARD'),
+            'os_platform': current_app.config.get('OS_PLATFORM'),
+            'machine_model': current_app.config.get('REGISTRY_MODELS'),
+        }
+
+        form_columns = [
+            'sn',
+            'machine_model',
+            'customer',
+            'description',
+            'vpn',
+            'computer_board',
+            'os_platform',
+            'notes',
+            'json_info'
+        ]
 
         column_labels = dict(sn='Serial Number')
 
@@ -1411,7 +1442,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 'jsonvalue': value,
                 'error': error, }
 
-            # logging.warning("form.extra_args:{}".format(form.extra_args))
+            logging.warning("form.extra_args:{}".format(form.extra_args))
 
             return form
 
