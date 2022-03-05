@@ -1,52 +1,67 @@
-<div id="editor_holder"></div>
+<!-- <div id="editor_holder"></div> -->
+<div id="json-editor-form"></div>
 
 {{ lib.render_form(form, return_url, extra(), form_opts) }}
 
 {% if form.extra_args is defined and form.extra_args.get('jsonvalue') %}
     <script>
 
-        var jsonvalue = {{ form.extra_args.get('jsonvalue', 'null') }};
-        var jsonschema = {{ form.extra_args.get('jsonschema', 'null') }};
+        var jsonvalue = {{ form.extra_args.get('jsonvalue', 'null')|safe }};
+        var jsonschema = {{ form.extra_args.get('jsonschema', 'null')|safe }};
+        console.debug('jsonvalue: ', jsonvalue)
+        console.debug('jsonschema: ', jsonschema)
 
         if (jsonschema){
-            JSONEditor.defaults.options.theme = 'bootstrap3';
-            JSONEditor.defaults.options.iconlib = 'fontawesome3';
-            JSONEditor.defaults.options.object_layout = 'grid';
-            JSONEditor.defaults.options.required_by_default = false;
-            JSONEditor.defaults.options.display_required_only = false;
-            JSONEditor.defaults.options.no_additional_properties = false;
-            JSONEditor.defaults.options.ajax = true;
-            JSONEditor.defaults.options.disable_edit_json = true;
-            JSONEditor.defaults.options.disable_collapse = false;
-            JSONEditor.defaults.options.disable_properties = true;
-            JSONEditor.defaults.options.disable_array_add = true;
-            JSONEditor.defaults.options.disable_array_reorder = true;
-            JSONEditor.defaults.options.disable_array_delete = true;
-            JSONEditor.defaults.options.disable_array_delete_all_rows = true;
-            JSONEditor.defaults.options.disable_array_delete_last_row = true;
 
-            console.log('jsonvalue: ' + jsonvalue);
-            console.log('jsonschema: ' + jsonschema);
+            var jsonEditorForm = document.querySelector('#json-editor-form')
+            var jsoneditor = null
 
-            // Initialize the editor
-            var editor = new JSONEditor(
-              document.getElementById("editor_holder"),
-              {schema: jsonschema});
-            // Set the default value
-            editor.setValue(jsonvalue);
+            data =  {
+                "options": {
+                    "iconlib": "fontawesome3",
+                    "object_layout": "normal",
+                    "schema": jsonschema,
+                    "show_errors": "interaction",
+                    "theme": "bootstrap3",
+                    "required_by_default": false,
+                    "display_required_only": false,
+                    "show_opt_in": false,
+                    "no_additional_properties": false,
+                    "ajax": true,
+                    "disable_edit_json": true,
+                    "disable_collapse": false,
+                    "disable_properties": true,
+                    "disable_array_add": false,
+                    "disable_array_reorder": false,
+                    "disable_array_delete": false,
+                    "enable_array_copy": false,
+                    "array_controls_top": false,
+                    "disable_array_delete_all_rows": false,
+                    "disable_array_delete_last_row": false
+                }
+            }
+            
+            // new instance of JSONEditor
+            jsoneditor = new window.JSONEditor(jsonEditorForm, data.options)
 
             // Validate
-            var errors = editor.validate();
+            var errors = jsoneditor.validate();
             if(errors.length) {
                 console.log('validation errors: ' + errors);
             }
 
-            editor.on("change",  function() {
-              var val = editor.getValue();
+            // Set the default value
+            if(jsonvalue){
+                jsoneditor.setValue(jsonvalue)
+            }
+
+            jsoneditor.on("change",  function() {
+              var val = jsoneditor.getValue();
               var el = document.getElementById("json_info");
               console.log("editor on change, val:" + val);
               el.value = JSON.stringify(val, null, 2);
             });
+
         }
     </script>
 {% endif %}
