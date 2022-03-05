@@ -269,8 +269,8 @@ REGISTRY_MODELS = [
     ('CR6', 'CR6'),
 ]
 
-FW_SW_VERSIONS = {}
-with (HERE / "sw_fw_versions.txt").open('r') as f:
+JSONSCHEMA_REGISTRY = {}
+with (HERE / "jsonschema_registry.json").open('r') as f:
     data = f.read()
-    # FW_SW_VERSIONS = json.dumps(data)
-    FW_SW_VERSIONS = data
+    JSONSCHEMA_REGISTRY = json.loads(data)
+    # FW_SW_VERSIONS = data

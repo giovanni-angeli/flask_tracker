@@ -1,0 +1,18 @@
+{
+  "title": "Machine registry",
+  "type": "object",
+  "properties": {
+    "alfa40_platform_info": {
+      "type": "string",
+      "format": "textarea",
+      "title": "alfa40 platform info",
+      "default": ""
+    },
+    "cmd_info": {
+      "type": "string",
+      "format": "textarea",
+      "title": "cmd info",
+      "default": ""
+    }
+  }
+}
