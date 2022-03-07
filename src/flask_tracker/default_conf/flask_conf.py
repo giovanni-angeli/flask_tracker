@@ -63,7 +63,7 @@ with sample_task_content_file_path.open('rt') as f:
 # ~ DATA_PATH =  '/mnt/dati/flask_tracker/data'
 DATA_PATH = '/opt/flask_tracker/data'
 
-database_file_ = os.path.join(DATA_PATH, 'tracker.v9.sqlite')
+database_file_ = os.path.join(DATA_PATH, 'tracker.vX.sqlite')
 wiki_contents_dir_ = os.path.join(DATA_PATH, 'wiki')
 
 # ~ ######################################
@@ -242,23 +242,6 @@ ROLE_CAPABILITY_MAP = {
     'suspended': {'default': ''}, }
 
 IPV4_BY_HOSTNAME = True
-
-COMPUTER_BOARD = [
-    ('Unknown', 'Unknown'),
-    ('WECX', 'WECX'),
-    ('BW551', 'BW551'),
-    ('RBPi 4', 'RBPi 4'),
-    ('BPi M5', 'BPi M5'),
-]
-
-OS_PLATFORM = [
-    ('Unknown', 'Unknown'),
-    ('Ubuntu 12 LTS', 'Ubuntu 12 LTS'),
-    ('Ubuntu 14 LTS', 'Ubuntu 14 LTS'),
-    ('Debian testing', 'Debian testing'),
-    ('Raspbian 10', 'Raspbian 10'),
-    ('AlRasbian 21/11', 'AlRasbian 21/11'),
-]
 
 REGISTRY_MODELS = [
     ('Color Tester', 'Color Tester'),

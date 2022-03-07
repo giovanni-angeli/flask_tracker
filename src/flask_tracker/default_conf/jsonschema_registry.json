@@ -2,6 +2,16 @@
   "title": "Machine registry",
   "type": "object",
   "properties": {
+    "supervisor_version": {
+      "type": "string",
+      "title": "supervisor version",
+      "default": ""
+    },
+    "alfadesk_version": {
+      "type": "string",
+      "title": "alfadesk version",
+      "default": ""
+    },
     "alfa40_platform_info": {
       "type": "string",
       "format": "textarea",
