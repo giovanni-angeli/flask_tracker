@@ -1,5 +1,4 @@
-<!-- <div id="editor_holder"></div> -->
-<div id="json-editor-form"></div>
+<div id="json-editor-form" ondrop="dropHandler(event);" ondragover="dragOverHandler(event)"></div>
 
 {{ lib.render_form(form, return_url, extra(), form_opts) }}
 
@@ -10,11 +9,12 @@
         var jsonschema = {{ form.extra_args.get('jsonschema', 'null')|safe }};
         console.debug('jsonvalue: ', jsonvalue)
         console.debug('jsonschema: ', jsonschema)
+        var jsoneditor = null
+        var alfa40_plat_infos_from_dragged_file = null
 
         if (jsonschema){
 
             var jsonEditorForm = document.querySelector('#json-editor-form')
-            var jsoneditor = null
 
             data =  {
                 "options": {
@@ -57,11 +57,48 @@
 
             jsoneditor.on("change",  function() {
               var val = jsoneditor.getValue();
+              if(alfa40_plat_infos_from_dragged_file){val['alfa40_platform_info'] = alfa40_plat_infos_from_dragged_file}
               var el = document.getElementById("json_info");
               console.log("editor on change, val:" + val);
               el.value = JSON.stringify(val, null, 2);
-            });
+            })}
 
+        function dragOverHandler(ev) {
+          // Prevent default behavior (Prevent file from being opened)
+          ev.preventDefault();
         }
+
+        function dropHandler(ev) {
+          console.log('File(s) dropped');
+
+          // Prevent default behavior (Prevent file from being opened)
+          ev.preventDefault();
+
+          if (ev.dataTransfer.items) {
+            // Use DataTransferItemList interface to access the file(s)
+            for (var i = 0; i < ev.dataTransfer.items.length; i++) {
+              if (ev.dataTransfer.items[i].kind === 'file') {
+                var file = ev.dataTransfer.items[i].getAsFile();
+                var file_name = file.name
+                var reader = new FileReader();
+                reader.readAsText(file, "UTF-8");
+                reader.onload = function (evt) {
+                    console.debug('file name: ', file.name)
+                    console.debug('file type: ', file.type)
+                    if(file_name.includes('platform_info') && file.type == 'application/json'){
+                        var alfa40_form_field = document.getElementsByName('root[alfa40_platform_info]')[0];
+                        alfa40_form_field.value = evt.target.result
+
+                        alfa40_plat_infos_from_dragged_file = evt.target.result
+                        jsoneditor.trigger("change")
+                    } else {
+                        alert('WRONG FILE TYPE (accepted only .json) OR FILE NAME (not created from Alfa40 PLATFORM)')
+                    }
+                }
+              }
+            }
+          }
+        }
+
     </script>
 {% endif %}
