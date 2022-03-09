@@ -1,4 +1,4 @@
-<div id="json-editor-form" ondrop="dropHandler(event);" ondragover="dragOverHandler(event)"></div>
+<div id="json-editor-form"></div>
 
 {{ lib.render_form(form, return_url, extra(), form_opts) }}
 
@@ -11,6 +11,19 @@
         console.debug('jsonschema: ', jsonschema)
         var jsoneditor = null
         var alfa40_plat_infos_from_dragged_file = null
+
+        // Prevent browser from loading a drag-and-dropped file
+        window.addEventListener("dragover",function(e){
+            e = e || event;
+            e.preventDefault();
+        },false);
+        window.addEventListener("drop",function(e){
+            e = e || event;
+            e.preventDefault();
+        },false);
+        // and enable drag-and-drop for json-editor-form
+        document.getElementById('json-editor-form').setAttribute("ondrop", "dropHandler(event);");
+        document.getElementById('json-editor-form').setAttribute("ondragover", "dragOverHandler(event);");
 
         if (jsonschema){
 
