@@ -1494,21 +1494,71 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
         def display_notes(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
             value = getattr(obj, name)
+            logging.warning(f'value: {value}')
             value = markdown.markdown(value)
             value = Markup(value)
             return value
 
-        def display_json_info(self, context, obj, name):    # pylint: disable=unused-argument, no-self-use
-            value = getattr(obj, name)
-            value = markdown.markdown(value.replace('\n', '<br>'))
+        def display_json_info(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
+
+            def _format_cmd_info(params):
+                clean_fw_dict = {}
+                for p in params:
+                    p_vals = params.get(p)
+                    p_k = p_vals[0]
+                    p_v = p_vals[1]
+                    clean_fw_dict.update({p_k : p_v})
+                    try:
+                        major, minor, patch = p_v.split('.')
+                        readable_version = f'{int(major, 16)}.{int(minor, 16)}.{int(patch, 16)}'
+                        clean_fw_dict.update({p_k : readable_version})
+                    except ValueError as excp:
+                        logging.error(excp)
+                clean_fw_str = json.dumps(clean_fw_dict)
+                # ugly way to improve readability on details page
+                clean_fw_str = clean_fw_str.replace(',', ',\n<br>')
+                return clean_fw_str
+
+            value = getattr(obj, name) #it is a string 
+            value_ = json.loads(value) # it is a json
+            logging.debug(f'value({type(value_)})')
+            for k in value_:
+                v_ = value_.get(k)
+                if k == 'alfa40_platform_info':
+                    value_[k] = v_.replace('\n', '<br>')
+                if k == 'cmd_info':
+                    tmp = json.loads(value_[k])
+                    if all(key in tmp for key in ('command', 'params')):
+                        params = tmp.get('params')
+                        readable_cmd_info = _format_cmd_info(params)  
+                        value_[k] = readable_cmd_info         
+
+            def _dict_to_html_table(_dict, _selected_field_names=None):
+
+                if _selected_field_names is None:
+                    _selected_field_names = list(_dict.keys())
+
+                _html_table = '<table class="table table-striped table-bordered"><tr>'
+                _html_table += '</tr><tr>'.join(['<td>{}:</td> <td class="{}"><code>{}</code></td>'.format(k, k, _dict[k])
+                                                 for k in _selected_field_names if _dict.get(k, '--undefined--') != '--undefined--'])
+                _html_table += '</tr></table>'
+
+                return _html_table
+
+            a = _dict_to_html_table(value_)
+            value = markdown.markdown(a)
             value = Markup(value)
             return value
 
         column_formatters = TrackerModelView.column_formatters.copy()
         column_formatters.update({
             'notes': display_notes,
-            'json_info': display_json_info,
+            # 'json_info': display_json_info,
         })
+
+        column_formatters_detail = {
+            'json_info': display_json_info,
+        }
 
         def on_model_change(self, form_, obj, is_created):
 
