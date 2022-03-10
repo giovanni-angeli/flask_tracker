@@ -1557,7 +1557,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         column_formatters = TrackerModelView.column_formatters.copy()
         column_formatters.update({
             'notes': display_notes,
-            # 'json_info': display_json_info,
+            'json_info': display_json_info,
         })
 
         column_formatters_detail = {
