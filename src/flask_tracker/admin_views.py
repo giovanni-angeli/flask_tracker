@@ -1529,7 +1529,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 if k == 'cmd_info':
                     try:
                         tmp = json.loads(value_[k])
-                        if all(key in tmp for key in ('command', 'params')):
+                        if isinstance(tmp, dict) and all(key in tmp for key in ('command', 'params')):
                             params = tmp.get('params')
                             readable_cmd_info = _format_cmd_info(params)
                             value_[k] = readable_cmd_info
