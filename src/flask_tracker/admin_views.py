@@ -1527,11 +1527,15 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 if k == 'alfa40_platform_info':
                     value_[k] = v_.replace('\n', '<br>')
                 if k == 'cmd_info':
-                    tmp = json.loads(value_[k])
-                    if all(key in tmp for key in ('command', 'params')):
-                        params = tmp.get('params')
-                        readable_cmd_info = _format_cmd_info(params)  
-                        value_[k] = readable_cmd_info         
+                    try:
+                        tmp = json.loads(value_[k])
+                        if all(key in tmp for key in ('command', 'params')):
+                            params = tmp.get('params')
+                            readable_cmd_info = _format_cmd_info(params)
+                            value_[k] = readable_cmd_info
+                    except ValueError as e:
+                        err_msg = getattr(e, 'message', repr(e))
+                        logging.error(err_msg + f'\n"{value_[k]}" is {type(value_[k])}')
 
             def _dict_to_html_table(_dict, _selected_field_names=None):
 
