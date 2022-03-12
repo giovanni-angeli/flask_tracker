@@ -1453,16 +1453,16 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             schema, value, error = _handle_json_schema(
                 obj=obj, deflt_schema=deflt_jsonschema)
 
-            form = super().create_form(*args, **kwargs)
+            form_ = super().create_form(*args, **kwargs)
 
-            form.extra_args = {
+            form_.extra_args = {
                 'jsonschema': schema,
                 'jsonvalue': value,
                 'error': error, }
 
             # logging.warning("form.extra_args:{}".format(form.extra_args))
 
-            return form
+            return form_
 
         def get_create_form(self):
 
@@ -1519,8 +1519,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 clean_fw_str = clean_fw_str.replace(',', ',\n<br>')
                 return clean_fw_str
 
-            value = getattr(obj, name) #it is a string 
-            value_ = json.loads(value) # it is a json
+            value = getattr(obj, name) #it is a string
+            value_ = json.loads(value)
             logging.debug(f'value({type(value_)})')
             for k in value_:
                 v_ = value_.get(k)
@@ -1543,7 +1543,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                     _selected_field_names = list(_dict.keys())
 
                 _html_table = '<table class="table table-striped table-bordered"><tr>'
-                _html_table += '</tr><tr>'.join(['<td>{}:</td> <td class="{}"><code>{}</code></td>'.format(k, k, _dict[k])
+                _html_table += '</tr><tr>'.join([f'<td>{k}:</td> <td class="{k}"><code>{_dict[k]}</code></td>'
                                                  for k in _selected_field_names if _dict.get(k, '--undefined--') != '--undefined--'])
                 _html_table += '</tr></table>'
 
@@ -1566,42 +1566,31 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
         def on_model_change(self, form_, obj, is_created):
 
-            obj_json_info = json.loads(obj.json_info)
-
-            if not obj_json_info.get('alfa40_platform_info'):
-                logging.warning('Raising >> Missing ALFA40 PLATFORM values')
-                form_.extra_args['jsonvalue'] = Markup(obj_json_info)
-                raise validators.ValidationError('Missing ALFA40 PLATFORM values')
-
-
-            if not obj_json_info.get('cmd_info'):
-                logging.warning('Raising >> Missing CMD INFO values')
-                form_.extra_args['jsonvalue'] = Markup(obj_json_info)
-                raise validators.ValidationError('Missing CMD INFO values')
-
             try:
-                assert obj.sn.isdigit()
-            except AssertionError:
-                logging.warning(f'{obj.sn} MUST contains only digits !')
-                form_.extra_args['jsonvalue'] = Markup(obj_json_info)
-                raise validators.ValidationError('Machine Serial Number MUST contains only numbers !')
+                obj_json_info = json.loads(obj.json_info)
+                err_msg_no_plat_info = 'Missing ALFA40 PLATFORM values'
+                err_msg_no_cmd_info = 'Missing CMD INFO values'
+                assert obj_json_info.get('alfa40_platform_info'), err_msg_no_plat_info
+                assert obj_json_info.get('cmd_info'), err_msg_no_cmd_info
 
-            try:
+                if obj.sn:
+                    form_sn = obj.sn
+                    err_msg_sn = f'Machine Serial Number MUST contains only numbers!! FOUND "{obj.sn}".'
+                    assert form_sn.isdigit(), err_msg_sn
+
+                    alfa40_platfrm_sn = json.loads(obj_json_info.get('alfa40_platform_info', {})).get('alfa SN', '')[0]
+                    err_msg_equal_sn = f'Machine Serial Number "{form_sn}" and ALFA40 PLATFORM SN "{alfa40_platfrm_sn}" NOT equals !'
+                    assert form_sn == alfa40_platfrm_sn, err_msg_equal_sn
+
                 if obj.vpn:
-                    ipaddress.ip_address(obj.vpn)
-            except ValueError:
-                logging.warning(f'{obj.vpn} MUST be a valid IPv4 address !')
-                form_.extra_args['jsonvalue'] = Markup(obj_json_info)
-                raise validators.ValidationError('Machine VPN MUST be a valid IPv4 address !')
+                    err_msg_vpn = f'Machine Serial Number "{obj.vpn}" MUST be a valid IPv4 address !'
+                    assert ipaddress.ip_address(obj.vpn), err_msg_vpn
 
-            try:
-                form_sn = obj.sn
-                alfa40_platfrm_sn = json.loads(obj_json_info.get('alfa40_platform_info', {})).get('alfa SN', '')[0]
-                assert form_sn == alfa40_platfrm_sn
-            except AssertionError:
-                logging.warning(f'{form_sn} MUST be equals to {alfa40_platfrm_sn} !')
+            except (AssertionError, ValueError) as e:
                 form_.extra_args['jsonvalue'] = Markup(obj_json_info)
-                raise validators.ValidationError('Machine Serial Number and ALFA40 PLATFORM SN NOT equals !')
+                logging.warning(f'ValidationError: {e}')
+                raise validators.ValidationError(e)
+
 
             if is_created and not (hasattr(form_, 'created_by') and obj.created_by):
                 obj.created_by = flask_login.current_user.name
