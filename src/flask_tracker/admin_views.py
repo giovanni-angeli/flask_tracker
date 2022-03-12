@@ -1519,6 +1519,18 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 clean_fw_str = clean_fw_str.replace(',', ',\n<br>')
                 return clean_fw_str
 
+            def _dict_to_html_table(_dict, _selected_field_names=None):
+
+                if _selected_field_names is None:
+                    _selected_field_names = list(_dict.keys())
+
+                _html_table = '<table class="table table-striped table-bordered"><tr>'
+                _html_table += '</tr><tr>'.join([f'<td>{k}:</td> <td class="{k}"><code>{_dict[k]}</code></td>'
+                                                 for k in _selected_field_names if _dict.get(k, '--undefined--') != '--undefined--'])
+                _html_table += '</tr></table>'
+
+                return _html_table
+
             value = getattr(obj, name) #it is a string
             value_ = json.loads(value)
             logging.debug(f'value({type(value_)})')
@@ -1536,18 +1548,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                     except ValueError as e:
                         err_msg = getattr(e, 'message', repr(e))
                         logging.error(err_msg + f'\n"{value_[k]}" is {type(value_[k])}')
-
-            def _dict_to_html_table(_dict, _selected_field_names=None):
-
-                if _selected_field_names is None:
-                    _selected_field_names = list(_dict.keys())
-
-                _html_table = '<table class="table table-striped table-bordered"><tr>'
-                _html_table += '</tr><tr>'.join([f'<td>{k}:</td> <td class="{k}"><code>{_dict[k]}</code></td>'
-                                                 for k in _selected_field_names if _dict.get(k, '--undefined--') != '--undefined--'])
-                _html_table += '</tr></table>'
-
-                return _html_table
 
             a = _dict_to_html_table(value_)
             value = markdown.markdown(a)
