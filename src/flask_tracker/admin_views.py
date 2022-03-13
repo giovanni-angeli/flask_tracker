@@ -293,6 +293,25 @@ def _handle_json_schema(obj, deflt_schema=None):
     return _schema, _value, _error
 
 
+def _format_cmd_info(params):
+    clean_fw_dict = {}
+    for p in params:
+        p_vals = params.get(p)
+        p_k = p_vals[0]
+        p_v = p_vals[1]
+        clean_fw_dict.update({p_k : p_v})
+        try:
+            major, minor, patch = p_v.split('.')
+            readable_version = f'{int(major, 16)}.{int(minor, 16)}.{int(patch, 16)}'
+            clean_fw_dict.update({p_k : readable_version})
+        except ValueError as excp:
+            logging.error(excp)
+    clean_fw_str = json.dumps(clean_fw_dict)
+    # ugly way to improve readability on details page
+    # clean_fw_str = clean_fw_str.replace(',', ',\n<br>')
+    return clean_fw_str
+
+
 def define_view_classes(current_app):  # pylint: disable=too-many-statements
     """
     we define our ModelView classes inside a function, because
@@ -1426,8 +1445,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'machine_model': current_app.config.get('REGISTRY_MODELS'),
         }
 
-        current_json_info = None
-
         def edit_form(self, *args, **kwargs):
 
             obj = kwargs.get('obj')
@@ -1501,24 +1518,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
         def display_json_info(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
 
-            def _format_cmd_info(params):
-                clean_fw_dict = {}
-                for p in params:
-                    p_vals = params.get(p)
-                    p_k = p_vals[0]
-                    p_v = p_vals[1]
-                    clean_fw_dict.update({p_k : p_v})
-                    try:
-                        major, minor, patch = p_v.split('.')
-                        readable_version = f'{int(major, 16)}.{int(minor, 16)}.{int(patch, 16)}'
-                        clean_fw_dict.update({p_k : readable_version})
-                    except ValueError as excp:
-                        logging.error(excp)
-                clean_fw_str = json.dumps(clean_fw_dict)
-                # ugly way to improve readability on details page
-                clean_fw_str = clean_fw_str.replace(',', ',\n<br>')
-                return clean_fw_str
-
             def _dict_to_html_table(_dict, _selected_field_names=None):
 
                 if _selected_field_names is None:
@@ -1539,18 +1538,10 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 if k == 'alfa40_platform_info':
                     value_[k] = v_.replace('\n', '<br>')
                 if k == 'cmd_info':
-                    try:
-                        tmp = json.loads(value_[k])
-                        if isinstance(tmp, dict) and all(key in tmp for key in ('command', 'params')):
-                            params = tmp.get('params')
-                            readable_cmd_info = _format_cmd_info(params)
-                            value_[k] = readable_cmd_info
-                    except ValueError as e:
-                        err_msg = getattr(e, 'message', repr(e))
-                        logging.error(err_msg + f'\n"{value_[k]}" is {type(value_[k])}')
+                    value_[k] = v_.replace(',', ',\n<br>')
 
-            a = _dict_to_html_table(value_)
-            value = markdown.markdown(a)
+            json_info_html_table = _dict_to_html_table(value_)
+            value = markdown.markdown(json_info_html_table)
             value = Markup(value)
             return value
 
@@ -1566,19 +1557,21 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
         def on_model_change(self, form_, obj, is_created):
 
+            dict_json_info = None
+
             try:
-                obj_json_info = json.loads(obj.json_info)
+                dict_json_info = json.loads(obj.json_info)
                 err_msg_no_plat_info = 'Missing ALFA40 PLATFORM values'
                 err_msg_no_cmd_info = 'Missing CMD INFO values'
-                assert obj_json_info.get('alfa40_platform_info'), err_msg_no_plat_info
-                assert obj_json_info.get('cmd_info'), err_msg_no_cmd_info
+                assert dict_json_info.get('alfa40_platform_info'), err_msg_no_plat_info
+                assert dict_json_info.get('cmd_info'), err_msg_no_cmd_info
 
                 if obj.sn:
                     form_sn = obj.sn
                     err_msg_sn = f'Machine Serial Number MUST contains only numbers!! FOUND "{obj.sn}".'
                     assert form_sn.isdigit(), err_msg_sn
 
-                    alfa40_platfrm_sn = json.loads(obj_json_info.get('alfa40_platform_info', {})).get('alfa SN', '')[0]
+                    alfa40_platfrm_sn = json.loads(dict_json_info.get('alfa40_platform_info', {})).get('alfa SN', '')[0]
                     err_msg_equal_sn = f'Machine Serial Number "{form_sn}" and ALFA40 PLATFORM SN "{alfa40_platfrm_sn}" NOT equals !'
                     assert form_sn == alfa40_platfrm_sn, err_msg_equal_sn
 
@@ -1587,7 +1580,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                     assert ipaddress.ip_address(obj.vpn), err_msg_vpn
 
             except (AssertionError, ValueError) as e:
-                form_.extra_args['jsonvalue'] = Markup(obj_json_info)
+                form_.extra_args['jsonvalue'] = Markup(dict_json_info)
                 logging.warning(f'ValidationError: {e}')
                 raise validators.ValidationError(e)
 
@@ -1597,6 +1590,20 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
             if not is_created and not hasattr(form_, 'modified_by'):
                 obj.modified_by = flask_login.current_user.name
+
+            try:
+                form_cmd_info = dict_json_info.get('cmd_info')
+                dict_cmd_info = json.loads(form_cmd_info)
+                if isinstance(dict_cmd_info, dict) and all(key in dict_cmd_info for key in ('command', 'params')):
+                    params = dict_cmd_info.get('params')
+                    readable_cmd_info = _format_cmd_info(params)
+                    logging.debug(f'readable_cmd_info({type(readable_cmd_info)}) > {readable_cmd_info}')
+                    dict_json_info['cmd_info'] = readable_cmd_info
+                    setattr(obj, 'json_info', json.dumps(dict_json_info))
+
+            except (ValueError, Exception) as e:
+                err_msg = getattr(e, 'message', repr(e))
+                logging.error(err_msg + f'\n"{form_cmd_info}" is {type(form_cmd_info)}')
 
             ret = super().on_model_change(form_, obj, is_created)
 
