@@ -1445,6 +1445,13 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'machine_model': current_app.config.get('REGISTRY_MODELS'),
         }
 
+        column_filters = (
+            'customer.name',
+            'machine_model',
+            'description',
+            'json_info',
+        )
+
         def edit_form(self, *args, **kwargs):
 
             obj = kwargs.get('obj')
