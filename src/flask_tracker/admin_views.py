@@ -293,24 +293,6 @@ def _handle_json_schema(obj, deflt_schema=None):
     return _schema, _value, _error
 
 
-def _format_cmd_info(params):
-    clean_fw_dict = {}
-    for p in params:
-        p_vals = params.get(p)
-        p_k = p_vals[0]
-        p_v = p_vals[1]
-        clean_fw_dict.update({p_k : p_v})
-        try:
-            major, minor, patch = p_v.split('.')
-            readable_version = f'{int(major, 16)}.{int(minor, 16)}.{int(patch, 16)}'
-            clean_fw_dict.update({p_k : readable_version})
-        except ValueError as excp:
-            logging.error(excp)
-    clean_fw_str = json.dumps(clean_fw_dict)
-
-    return clean_fw_str
-
-
 def define_view_classes(current_app):  # pylint: disable=too-many-statements
     """
     we define our ModelView classes inside a function, because
@@ -1595,20 +1577,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
             if not is_created and not hasattr(form_, 'modified_by'):
                 obj.modified_by = flask_login.current_user.name
-
-            try:
-                form_cmd_info = dict_json_info.get('cmd_info', {})
-                dict_cmd_info = json.loads(form_cmd_info)
-                if isinstance(dict_cmd_info, dict) and all(key in dict_cmd_info for key in ('command', 'params')):
-                    params = dict_cmd_info.get('params')
-                    readable_cmd_info = _format_cmd_info(params)
-                    logging.debug(f'readable_cmd_info({type(readable_cmd_info)}) > {readable_cmd_info}')
-                    dict_json_info['cmd_info'] = readable_cmd_info
-                    setattr(obj, 'json_info', json.dumps(dict_json_info))
-
-            except (ValueError, Exception) as e:
-                err_msg = getattr(e, 'message', repr(e))
-                logging.error(err_msg + f'\n"{form_cmd_info}" is {type(form_cmd_info)}')
 
             ret = super().on_model_change(form_, obj, is_created)
 
