@@ -1516,7 +1516,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
         def display_notes(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
             value = getattr(obj, name)
-            logging.warning(f'value: {value}')
+            # logging.warning(f'value: {value}')
             value = markdown.markdown(value)
             value = Markup(value)
             return value
