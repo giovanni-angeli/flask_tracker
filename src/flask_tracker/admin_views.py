@@ -307,8 +307,7 @@ def _format_cmd_info(params):
         except ValueError as excp:
             logging.error(excp)
     clean_fw_str = json.dumps(clean_fw_dict)
-    # ugly way to improve readability on details page
-    # clean_fw_str = clean_fw_str.replace(',', ',\n<br>')
+
     return clean_fw_str
 
 
@@ -1409,7 +1408,6 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
         column_searchable_list = (
             'sn',
-            # 'customer',
             'vpn',
             'machine_model',
             'json_info',
@@ -1599,7 +1597,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 obj.modified_by = flask_login.current_user.name
 
             try:
-                form_cmd_info = dict_json_info.get('cmd_info')
+                form_cmd_info = dict_json_info.get('cmd_info', {})
                 dict_cmd_info = json.loads(form_cmd_info)
                 if isinstance(dict_cmd_info, dict) and all(key in dict_cmd_info for key in ('command', 'params')):
                     params = dict_cmd_info.get('params')
