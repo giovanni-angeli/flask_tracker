@@ -280,15 +280,8 @@ def _handle_json_schema(obj, deflt_schema=None):
         except Exception as exc:
             logging.warning("exc: {}".format(exc))
 
-    # _schema['title'] = title
-    # _schema = Markup(json.dumps(_schema))
-    # _value = Markup(json.dumps(_value, indent=2))
-
     _schema = Markup(_schema)
     _value = Markup(_value)
-
-    # logging.warning(f'schema -> {_schema}')
-    # logging.warning(f'value -> {_value}')
 
     return _schema, _value, _error
 
