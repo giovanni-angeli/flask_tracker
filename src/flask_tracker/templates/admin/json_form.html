@@ -1,0 +1,117 @@
+<div id="json-editor-form"></div>
+
+{{ lib.render_form(form, return_url, extra(), form_opts) }}
+
+{% if form.extra_args is defined and form.extra_args.get('jsonvalue') %}
+    <script>
+
+        var jsonvalue = {{ form.extra_args.get('jsonvalue', 'null')|safe }};
+        var jsonschema = {{ form.extra_args.get('jsonschema', 'null')|safe }};
+        console.debug('jsonvalue: ', jsonvalue)
+        console.debug('jsonschema: ', jsonschema)
+        var jsoneditor = null
+        var alfa40_plat_infos_from_dragged_file = null
+
+        // Prevent browser from loading a drag-and-dropped file
+        window.addEventListener("dragover",function(e){
+            e = e || event;
+            e.preventDefault();
+        },false);
+        window.addEventListener("drop",function(e){
+            e = e || event;
+            e.preventDefault();
+        },false);
+        // and enable drag-and-drop for json-editor-form
+        document.getElementById('json-editor-form').setAttribute("ondrop", "dropHandler(event);");
+        document.getElementById('json-editor-form').setAttribute("ondragover", "dragOverHandler(event);");
+
+        if (jsonschema){
+
+            var jsonEditorForm = document.querySelector('#json-editor-form')
+
+            data =  {
+                "options": {
+                    "iconlib": "fontawesome3",
+                    "object_layout": "normal",
+                    "schema": jsonschema,
+                    "show_errors": "interaction",
+                    "theme": "bootstrap3",
+                    "required_by_default": false,
+                    "display_required_only": false,
+                    "show_opt_in": false,
+                    "no_additional_properties": false,
+                    "ajax": true,
+                    "disable_edit_json": true,
+                    "disable_collapse": false,
+                    "disable_properties": true,
+                    "disable_array_add": false,
+                    "disable_array_reorder": false,
+                    "disable_array_delete": false,
+                    "enable_array_copy": false,
+                    "array_controls_top": false,
+                    "disable_array_delete_all_rows": false,
+                    "disable_array_delete_last_row": false
+                }
+            }
+            
+            // new instance of JSONEditor
+            jsoneditor = new window.JSONEditor(jsonEditorForm, data.options)
+
+            // Validate
+            var errors = jsoneditor.validate();
+            if(errors.length) {
+                console.log('validation errors: ' + errors);
+            }
+
+            // Set the default value
+            if(jsonvalue){
+                jsoneditor.setValue(jsonvalue)
+            }
+
+            jsoneditor.on("change",  function() {
+              var val = jsoneditor.getValue();
+              if(alfa40_plat_infos_from_dragged_file){val['alfa40_platform_info'] = alfa40_plat_infos_from_dragged_file}
+              var el = document.getElementById("json_info");
+              console.log("editor on change, val:" + val);
+              el.value = JSON.stringify(val, null, 2);
+            })}
+
+        function dragOverHandler(ev) {
+          // Prevent default behavior (Prevent file from being opened)
+          ev.preventDefault();
+        }
+
+        function dropHandler(ev) {
+          console.log('File(s) dropped');
+
+          // Prevent default behavior (Prevent file from being opened)
+          ev.preventDefault();
+
+          if (ev.dataTransfer.items) {
+            // Use DataTransferItemList interface to access the file(s)
+            for (var i = 0; i < ev.dataTransfer.items.length; i++) {
+              if (ev.dataTransfer.items[i].kind === 'file') {
+                var file = ev.dataTransfer.items[i].getAsFile();
+                var file_name = file.name
+                var reader = new FileReader();
+                reader.readAsText(file, "UTF-8");
+                reader.onload = function (evt) {
+                    console.debug('file name: ', file.name)
+                    console.debug('file type: ', file.type)
+                    if(file_name.includes('platform_info') && file.type == 'application/json'){
+                        var alfa40_form_field = document.getElementsByName('root[alfa40_platform_info]')[0];
+                        alfa40_form_field.value = evt.target.result
+
+                        alfa40_plat_infos_from_dragged_file = evt.target.result
+                        jsoneditor.trigger("change")
+                    } else {
+                        alert('WRONG FILE TYPE (accepted only .json) OR FILE NAME (not created from Alfa40 PLATFORM)')
+                    }
+                }
+              }
+            }
+          }
+        }
+
+    </script>
+{% endif %}

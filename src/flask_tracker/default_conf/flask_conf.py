@@ -3,6 +3,7 @@
 import os
 import pathlib
 import re
+import json
 
 
 def slugify(text):
@@ -239,3 +240,20 @@ ROLE_CAPABILITY_MAP = {
     },
     'guest': {'default': 'r'},
     'suspended': {'default': ''}, }
+
+IPV4_BY_HOSTNAME = True
+
+REGISTRY_MODELS = [
+    ('Color Tester', 'Color Tester'),
+    ('Color Lab', 'Color Lab'),
+    ('Desk', 'Desk'),
+    ('Thor', 'Thor'),
+    ('CR4', 'CR4'),
+    ('CR6', 'CR6'),
+]
+
+JSONSCHEMA_REGISTRY = {}
+with (HERE / "jsonschema_registry.json").open('r') as f:
+    data = f.read()
+    JSONSCHEMA_REGISTRY = json.loads(data)
+    # FW_SW_VERSIONS = data

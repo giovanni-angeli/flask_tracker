@@ -1,13 +1,13 @@
 # coding: utf-8
 
 # pylint: disable=missing-docstring
-# pylint: disable=logging-format-interpolation
 # pylint: disable=line-too-long
 # pylint: disable=invalid-name
 # pylint: disable=too-many-arguments
 # pylint: disable=too-many-locals
+# pylint: disable=too-many-statements
 # pylint: disable=broad-except
-# pylint: disable=too-many-lines
+# pylint: disable=logging-fstring-interpolation, consider-using-f-string, too-many-lines, logging-format-interpolation
 
 import os
 import sys
@@ -22,6 +22,7 @@ from datetime import datetime, timezone, timedelta
 
 from multiprocessing import Process
 
+import ipaddress
 import markdown  # pylint: disable=import-error
 
 try:
@@ -36,7 +37,7 @@ import flask_login  # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
 from flask_admin.form.widgets import DatePickerWidget  # pylint: disable=import-error
 
-from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT, ItemBase)
+from flask_tracker.models import (User, History, MODELS_GLOBAL_CONTEXT, ItemBase, Registry)
 
 import unidecode # pylint: disable=import-error
 
@@ -145,7 +146,7 @@ def _handle_item_modification(form_, item, current_app):     # pylint: disable=n
             svr_ip = current_app.config.get("HOST")
             if current_app.config.get("IPV4_BY_HOSTNAME", False):
                 # Translate a host name to IPv4 address format
-                import socket
+                import socket   # pylint: disable=import-outside-toplevel
                 hostname = socket.gethostname()
                 svr_ip = socket.gethostbyname(hostname)
 
@@ -257,6 +258,34 @@ def _colorize_diffs(diff):
     return colorized_diff
 
 
+def _handle_json_schema(obj, deflt_schema=None):
+
+    _schema = {}
+    _value = None
+    _error = None
+    model_name = obj.__class__.__name__.lower()
+
+    if deflt_schema:
+        _value = {p:deflt_schema['properties'][p]['default'] for p in deflt_schema['properties']}
+        deflt_schema['title'] = "New Registry Machine"
+        _schema = deflt_schema
+
+    if obj is not None and model_name == 'registry':
+        try:
+            title = "{} machine sn: {}".format(model_name, obj.sn)
+            if obj and obj.json_info:
+                _value = json.loads(obj.json_info)
+                _schema['title'] = title
+
+        except Exception as exc:
+            logging.warning("exc: {}".format(exc))
+
+    _schema = Markup(_schema)
+    _value = Markup(_value)
+
+    return _schema, _value, _error
+
+
 def define_view_classes(current_app):  # pylint: disable=too-many-statements
     """
     we define our ModelView classes inside a function, because
@@ -309,7 +338,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                     ret = True
             return ret
 
-        def on_model_change(self, form_, obj, is_created):
+        def on_model_change(self, form_, obj, is_created): # pylint: disable=super-with-arguments
 
             if is_created:
                 if not has_capabilities(current_app, flask_login.current_user, self.model.__tablename__, operation='c'):
@@ -319,7 +348,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                     raise validators.ValidationError('permission denied on edit')
 
             obj.date_modified = datetime.utcnow()
-            ret = super(TrackerModelView, self).on_model_change(form_, obj, is_created)
+            ret = super(TrackerModelView, self).on_model_change(form_, obj, is_created) # pylint: disable=super-with-arguments
             return ret
 
     class WorkTimeBaseView(TrackerModelView):  # pylint: disable=unused-variable, possibly-unused-variable
@@ -1335,6 +1364,215 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                     obj.name = filename
 
             ret = super().on_model_change(form_, obj, is_created)
+            return ret
+
+    class RegistryView(TrackerModelView):
+
+        column_list = (
+            'created_by',
+            'modified_by',
+            'date_created',
+            'date_modified',
+            'sn',
+            'machine_model',
+            'customer',
+            'description',
+            'vpn',
+            'notes',
+        )
+
+        column_searchable_list = (
+            'sn',
+            'vpn',
+            'machine_model',
+            'json_info',
+        )
+
+        column_details_list = (
+            'date_created',
+            'date_modified',
+            'created_by',
+            'modified_by',
+            'sn',
+            'machine_model',
+            'customer',
+            'description',
+            'vpn',
+            'notes',
+            'json_info',
+        )
+
+        form_columns = [
+            'sn',
+            'machine_model',
+            'customer',
+            'description',
+            'vpn',
+            'notes',
+            'json_info'
+        ]
+
+        column_labels = dict(sn='Serial Number')
+
+        form_choices = {
+            'machine_model': current_app.config.get('REGISTRY_MODELS'),
+        }
+
+        column_filters = (
+            'customer.name',
+            'machine_model',
+            'description',
+            'json_info',
+        )
+
+        def edit_form(self, *args, **kwargs):
+
+            obj = kwargs.get('obj')
+            deflt_jsonschema = current_app.config.get('JSONSCHEMA_REGISTRY', {})
+            schema, value, error = _handle_json_schema(
+                obj=obj, deflt_schema=deflt_jsonschema)
+
+            form_ = super().edit_form(*args, **kwargs)
+
+            form_.extra_args = {
+                'jsonschema': schema,
+                'jsonvalue': value,
+                'error': error, }
+
+            # logging.warning("form.extra_args:{}".format(form.extra_args))
+
+            return form_
+
+        def create_form(self, *args, **kwargs):
+
+            obj = kwargs.get('obj')
+            deflt_jsonschema = current_app.config.get('JSONSCHEMA_REGISTRY', {})
+            schema, value, error = _handle_json_schema(
+                obj=obj, deflt_schema=deflt_jsonschema)
+
+            form_ = super().create_form(*args, **kwargs)
+
+            form_.extra_args = {
+                'jsonschema': schema,
+                'jsonvalue': value,
+                'error': error, }
+
+            # logging.warning("form.extra_args:{}".format(form.extra_args))
+
+            return form_
+
+        def get_create_form(self):
+
+            form_ = super().get_create_form()
+
+            form_.notes = fields.TextAreaField(
+                'notes',
+                [validators.optional(), validators.length(max=Registry.content_max_len)],
+                render_kw={
+                    "style": "background:#fff; border:dashed #DD3333 1px; height:240px;"
+                },
+            )
+
+            return form_
+
+        def get_edit_form(self):
+
+            form_ = super().get_edit_form()
+
+            form_.notes = fields.TextAreaField(
+                'notes',
+                [validators.optional(), validators.length(max=Registry.content_max_len)],
+                render_kw={
+                    "style": "background:#fff; border:dashed #DD3333 1px; height:240px;"
+                },
+            )
+
+            return form_
+
+        def display_notes(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
+            value = getattr(obj, name)
+            # logging.warning(f'value: {value}')
+            value = markdown.markdown(value)
+            value = Markup(value)
+            return value
+
+        def display_json_info(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
+
+            def _dict_to_html_table(_dict, _selected_field_names=None):
+
+                if _selected_field_names is None:
+                    _selected_field_names = list(_dict.keys())
+
+                _html_table = '<table class="table table-striped table-bordered"><tr>'
+                _html_table += '</tr><tr>'.join([f'<td>{k}:</td> <td class="{k}"><code>{_dict[k]}</code></td>'
+                                                 for k in _selected_field_names if _dict.get(k, '--undefined--') != '--undefined--'])
+                _html_table += '</tr></table>'
+
+                return _html_table
+
+            value = getattr(obj, name) #it is a string
+            value_ = json.loads(value)
+            logging.debug(f'value({type(value_)})')
+            for k in value_:
+                v_ = value_.get(k)
+                if k == 'alfa40_platform_info':
+                    value_[k] = v_.replace('\n', '<br>')
+                if k == 'cmd_info':
+                    value_[k] = v_.replace(',', ',\n<br>')
+
+            json_info_html_table = _dict_to_html_table(value_)
+            value = markdown.markdown(json_info_html_table)
+            value = Markup(value)
+            return value
+
+        column_formatters = TrackerModelView.column_formatters.copy()
+        column_formatters.update({
+            'notes': display_notes,
+            'json_info': display_json_info,
+        })
+
+        column_formatters_detail = {
+            'json_info': display_json_info,
+        }
+
+        def on_model_change(self, form_, obj, is_created):
+
+            dict_json_info = None
+
+            try:
+                dict_json_info = json.loads(obj.json_info)
+                err_msg_no_plat_info = 'Missing ALFA40 PLATFORM values'
+                err_msg_no_cmd_info = 'Missing CMD INFO values'
+                assert dict_json_info.get('alfa40_platform_info'), err_msg_no_plat_info
+                assert dict_json_info.get('cmd_info'), err_msg_no_cmd_info
+
+                if obj.sn:
+                    form_sn = obj.sn
+                    err_msg_sn = f'Machine Serial Number MUST contains only numbers!! FOUND "{obj.sn}".'
+                    assert form_sn.isdigit(), err_msg_sn
+
+                    alfa40_platfrm_sn = json.loads(dict_json_info.get('alfa40_platform_info', {})).get('alfa SN', '')[0]
+                    err_msg_equal_sn = f'Machine Serial Number "{form_sn}" and ALFA40 PLATFORM SN "{alfa40_platfrm_sn}" NOT equals !'
+                    assert form_sn == alfa40_platfrm_sn, err_msg_equal_sn
+
+                if obj.vpn:
+                    err_msg_vpn = f'Machine Serial Number "{obj.vpn}" MUST be a valid IPv4 address !'
+                    assert ipaddress.ip_address(obj.vpn), err_msg_vpn
+
+            except (AssertionError, ValueError) as e:
+                form_.extra_args['jsonvalue'] = Markup(dict_json_info)
+                logging.warning(f'ValidationError: {e}')
+                raise validators.ValidationError(e)
+
+
+            if is_created and not (hasattr(form_, 'created_by') and obj.created_by):
+                obj.created_by = flask_login.current_user.name
+
+            if not is_created and not hasattr(form_, 'modified_by'):
+                obj.modified_by = flask_login.current_user.name
+
+            ret = super().on_model_change(form_, obj, is_created)
+
             return ret
 
     return locals()

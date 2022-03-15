@@ -1,10 +1,10 @@
 # coding: utf-8
 
 # pylint: disable=missing-docstring
-# pylint: disable=logging-format-interpolation
 # pylint: disable=line-too-long
 # pylint: disable=invalid-name
 # pylint: disable=broad-except
+# pylint: disable=logging-format-interpolation, consider-using-f-string
 
 import os
 import uuid
@@ -39,8 +39,8 @@ def get_package_version():
     if MODELS_GLOBAL_CONTEXT.get('package_version'):
         return MODELS_GLOBAL_CONTEXT['package_version']
 
-    import subprocess
-    import sys
+    import subprocess   # pylint: disable=import-outside-toplevel
+    import sys          # pylint: disable=import-outside-toplevel
 
     ver = '0.0.0'
     try:
@@ -48,7 +48,7 @@ def get_package_version():
         # ~ logging.warning("pth:{}".format(pth))
         cmd_ = '{}/pip show flask_tracker'.format(pth)
         # ~ logging.warning("cmd_:{}".format(cmd_))
-        for line in subprocess.run(cmd_.split(), stdout=subprocess.PIPE).stdout.decode().split('\n'):
+        for line in subprocess.run(cmd_.split(), stdout=subprocess.PIPE).stdout.decode().split('\n'): # pylint: disable=subprocess-run-check
             # ~ logging.warning("line:{}".format(line))
             if 'Version' in line:
                 ver = line.split(":")[1]
@@ -121,11 +121,11 @@ def insert_users_in_db(app, db):
 
 def fix_slugify_categoriy_in_tasks(app, db):
 
-    import re
+    import re # pylint: disable=import-outside-toplevel
 
     def slugify(text):
         try:
-            import unidecode  # pylint: disable=import-error
+            import unidecode  # pylint: disable=import-error, import-outside-toplevel
             text = unidecode.unidecode(text).lower()
         except ModuleNotFoundError:
             text = text.lower()
@@ -195,16 +195,16 @@ def populate_sample_db(app, db, N):   # pylint: disable=too-many-locals
                 logging.info(exc)
                 logging.debug(traceback.format_exc())
 
-        import random
+        import random # pylint: disable=import-outside-toplevel
 
         priorities = [s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_PRIORITIES", [])]
         categories = [s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_categORIES", [])]
         sts_ = [s for s, S in MODELS_GLOBAL_CONTEXT['app'].config.get("TASK_STATUSES", [])]
         tags = ['fattibilita', 'pianificazione', 'design', 'prototipo', 'preserie']
-        users = [u for u in db.session.query(User).all()]
-        projects = [u for u in db.session.query(Project).all()]
-        orders = [u for u in db.session.query(Order).all()]
-        milestones = [u for u in db.session.query(Milestone).all()]
+        users = [u for u in db.session.query(User).all()]               # pylint: disable=unnecessary-comprehension
+        projects = [u for u in db.session.query(Project).all()]         # pylint: disable=unnecessary-comprehension
+        orders = [u for u in db.session.query(Order).all()]             # pylint: disable=unnecessary-comprehension
+        milestones = [u for u in db.session.query(Milestone).all()]     # pylint: disable=unnecessary-comprehension
         # ~ logging.warning("priorities:{}".format( priorities))
         # ~ logging.warning("sts_      :{}".format(sts_      ))
         # ~ logging.warning("users:{}".format(users))
@@ -282,7 +282,7 @@ notifyings = sqlalchemy_db_.Table(
         primary_key=True))
 
 
-class BaseModel(object):                         # pylint: disable=too-few-public-methods
+class BaseModel():                         # pylint: disable=too-few-public-methods
 
     row_count_limt = 100 * 1000
 
@@ -377,6 +377,7 @@ class Customer(NamedModel, sqlalchemy_Model):   # pylint: disable=too-few-public
     orders = db.relationship('Order', backref='customer')
     claims = db.relationship('Claim', backref='customer')
     improvements = db.relationship('Improvement', backref='customer')
+    registers = db.relationship('Registry', backref='customer')
 
 
 class Order(NamedModel, sqlalchemy_Model):    # pylint: disable=too-few-public-methods
@@ -602,6 +603,25 @@ class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-pub
     # notifier_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
     followers = db.relationship('User', secondary=notifyings, backref='notified')
     modifications = db.relationship('History', backref='improvement', cascade="all, delete-orphan")
+
+
+class Registry(BaseModel, sqlalchemy_Model):
+
+    content_max_len = 5 * 1024
+    db = MODELS_GLOBAL_CONTEXT['db']
+
+    sn = db.Column(db.Unicode(64), nullable=False, unique=True, index=True)
+    customer_id = db.Column(db.Unicode, db.ForeignKey('customer.id'))
+    json_info = sqlalchemy_db_.Column(
+        sqlalchemy_db_.UnicodeText,
+        default='{}',
+    )
+    machine_model = db.Column(db.Unicode(64), default='')
+    vpn = db.Column(db.Unicode(64), default='')
+    notes = db.Column(db.Unicode(content_max_len), default='')
+
+    created_by = db.Column(db.Unicode(64))
+    modified_by = db.Column(db.Unicode(64))
 
 
 def do_delete_pending_objects(session, flush_context, instances=None):  # pylint: disable=unused-argument
