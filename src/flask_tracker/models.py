@@ -21,7 +21,18 @@ from flask import Markup  # pylint: disable=import-error
 from werkzeug.security import generate_password_hash  # pylint: disable=import-error
 import flask_sqlalchemy              # pylint: disable=import-error
 
-sqlalchemy_db_ = flask_sqlalchemy.SQLAlchemy()
+from sqlalchemy import MetaData
+
+convention = {
+    "ix": 'ix_%(column_0_label)s',
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s"
+}
+
+metadata = MetaData(naming_convention=convention)
+sqlalchemy_db_ = flask_sqlalchemy.SQLAlchemy(metadata=metadata)
 sqlalchemy_session_ = None
 sqlalchemy_Model = sqlalchemy_db_.Model
 
