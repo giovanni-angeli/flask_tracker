@@ -292,6 +292,32 @@ notifyings = sqlalchemy_db_.Table(
         sqlalchemy_db_.ForeignKey('improvement.id'),
         primary_key=True))
 
+task_involved_resources = sqlalchemy_db_.Table(
+    'task_involved_resources',
+    sqlalchemy_db_.Column(
+        'user_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('user.id'),
+        primary_key=True),
+    sqlalchemy_db_.Column(
+        'task_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('task.id'),
+        primary_key=True))
+
+claim_involved_resources = sqlalchemy_db_.Table(
+    'claim_involved_resources',
+    sqlalchemy_db_.Column(
+        'user_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('user.id'),
+        primary_key=True),
+    sqlalchemy_db_.Column(
+        'claim_id',
+        sqlalchemy_db_.Unicode,
+        sqlalchemy_db_.ForeignKey('claim.id'),
+        primary_key=True))
+
 
 class BaseModel():                         # pylint: disable=too-few-public-methods
 
@@ -376,6 +402,46 @@ class NamedModel(BaseModel):
         return self.__str__()
 
 
+class ItemBase(NamedModel):     # pylint: disable=too-few-public-methods
+
+    content_max_len = 5 * 1024
+
+    db = MODELS_GLOBAL_CONTEXT['db']
+
+    name = db.Column(db.Unicode(64), nullable=False)
+
+    department = db.Column(db.Unicode(16))
+    created_by = db.Column(db.Unicode(64))
+    status = db.Column(db.Unicode(16), default='new')
+    priority = db.Column(db.Unicode(16), default='low')
+
+    # ~ to be overridden by inheriting class
+    attachments = []
+
+    @property
+    def formatted_attach_names(self):
+        ret = [Markup(a.name) for a in self.attachments]
+        return ret
+
+    @formatted_attach_names.setter
+    def formatted_attach_names(self, val):
+        pass
+
+
+class ItemExtended(ItemBase):
+
+    db = MODELS_GLOBAL_CONTEXT['db']
+
+    start_date = db.Column(db.DateTime, default=datetime.utcnow)
+    due_date = db.Column(db.DateTime, default=datetime.utcnow)
+    completion = db.Column(db.Float, default=0.00)
+    lesson_learned = db.Column(db.Unicode())
+
+    # ~ to be overridden by inheriting class
+    resources = []
+    teamleader_id = None
+
+
 class Project(NamedModel, sqlalchemy_Model):  # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
@@ -414,6 +480,7 @@ class Milestone(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-pub
     start_date = db.Column(db.Date, default=datetime.utcnow)
     due_date = db.Column(db.Date, default=datetime.utcnow)
     tasks = db.relationship('Task', backref='milestone')
+    claims = db.relationship('Claim', backref='milestone')
 
     project_id = db.Column(db.Unicode, db.ForeignKey('project.id'))
 
@@ -456,15 +523,18 @@ class User(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-public-m
     worktimes = db.relationship('WorkTime', backref='user')
     worktimes_claim = db.relationship('WorkTimeClaim', backref='user')
 
-    assigned_tasks = db.relationship('Task', backref='assignee')
+    assigned_tasks = db.relationship('Task', backref='assignee', foreign_keys="Task.assignee_id")
 
-    assigned_claims = db.relationship('Claim', backref='owner')
+    assigned_claims = db.relationship('Claim', backref='owner', foreign_keys="Claim.owner_id")
+    teamleader_claim = db.relationship(
+        'Claim', primaryjoin="User.id==Claim.teamleader_id", backref='teamleader')
+    teamleader_task = db.relationship(
+        'Task', primaryjoin="User.id==Task.teamleader_id", backref='teamleader')
 
     modifications = db.relationship('History', backref='user')
 
     authored_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.author_id", backref='author')
     assigned_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.assignee_id", backref='assignee')
-    # notified_improvements = db.relationship('Improvement', primaryjoin="User.id==Improvement.notifier_id", backref='notifier')
 
     @property
     def login(self):
@@ -507,33 +577,7 @@ class History(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-public
     improvement_id = db.Column(db.Unicode, db.ForeignKey('improvement.id'))
 
 
-class ItemBase(NamedModel):     # pylint: disable=too-few-public-methods
-
-    content_max_len = 5 * 1024
-
-    db = MODELS_GLOBAL_CONTEXT['db']
-
-    name = db.Column(db.Unicode(64), nullable=False)
-
-    department = db.Column(db.Unicode(16))
-    created_by = db.Column(db.Unicode(64))
-    status = db.Column(db.Unicode(16), default='new')
-    priority = db.Column(db.Unicode(16), default='low')
-
-    # ~ to be overridden by inheriting class
-    attachments = []
-
-    @property
-    def formatted_attach_names(self):
-        ret = [Markup(a.name) for a in self.attachments]
-        return ret
-
-    @formatted_attach_names.setter
-    def formatted_attach_names(self, val):
-        pass
-
-
-class Task(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
+class Task(ItemExtended, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
 
@@ -557,14 +601,17 @@ class Task(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-met
     modifications = db.relationship('History', backref='task', cascade="all, delete-orphan")
     followers = db.relationship('User', secondary=followings, backref='followed')
 
+    teamleader_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
+    resources = db.relationship('User', secondary=task_involved_resources, backref='task_resources')
 
-class Claim(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
+
+class Claim(ItemExtended, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
 
     db = MODELS_GLOBAL_CONTEXT['db']
 
     id = db.Column(db.Unicode, primary_key=True, nullable=False, default=generate_id)
 
-    content = db.Column(db.Unicode(5 * 1024), default=get_default_claim_content)
+    content = db.Column(db.Unicode(ItemBase.content_max_len), default=get_default_claim_content)
 
     contact = db.Column(db.Unicode())  # : (mail)
     machine_model = db.Column(db.Unicode(64))
@@ -586,6 +633,11 @@ class Claim(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-me
     followers = db.relationship('User', secondary=claimings, backref='claimed')
 
     worktimes_claim = db.relationship('WorkTimeClaim', backref='claim')
+
+    milestone_id = db.Column(db.Unicode, db.ForeignKey('milestone.id'))
+    department = db.Column(db.Unicode(16))
+    teamleader_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
+    resources = db.relationship('User', secondary=claim_involved_resources, backref='claim_resources')
 
 
 class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
