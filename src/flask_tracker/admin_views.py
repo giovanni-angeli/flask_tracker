@@ -295,7 +295,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         can_view_details = True
         can_export = True
         export_max_rows = 1000
-        export_types = ['csv', 'xls', 'json']
+        export_types = ['csv', 'json']
 
         details_template = "admin/details.html"
         list_template = 'admin/list.html'
@@ -431,6 +431,9 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'task',
         ]
 
+        column_export_list = WorkTimeBaseView.column_list.copy()
+        column_export_list += ['task.name']
+
         def display_task(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
             value = getattr(obj, name)
             ret = value
@@ -457,6 +460,9 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
         column_filters = WorkTimeBaseView.column_filters.copy()
         column_filters += ['claim', ]
+
+        column_export_list = WorkTimeBaseView.column_list.copy()
+        column_export_list += ['claim.name']
 
         def display_claim(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
             value = getattr(obj, name)
@@ -867,6 +873,36 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'lesson_learned',
         )
 
+        column_export_list = (
+            'name',
+            'id',
+            'description',
+            'status',
+            'customer',
+            'priority',
+            'date_created',
+            'date_modified',
+            'machine_model',
+            'serial_number',
+            'installation_date',
+            'damaged_group',
+            'owner',
+            'teamleader.name',
+            'followers',
+            'resources',
+            'planned_time',
+            'start_date',
+            'due_date',
+            'worktimes_claim',
+            'completion',
+            'lesson_learned',
+        )
+
+        column_formatters_export = dict(
+           worktimes_claim=lambda v, c, m, p: '0' if m.worktimes_claim is None else sum([h.duration for h in m.worktimes_claim]),
+           id=lambda v, c, m, p: m.id[:4].upper(),
+        )
+
         custom_row_actions = [
             ("/add_a_working_claim_time_slot", '', 'fa fa-time glyphicon glyphicon-time',
              '_self', 'confirm adding hours?', 'Add Worked Hours'),
@@ -1019,6 +1055,35 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'due_date',
             'completion',
         )
+
+        column_export_list = (
+            'name',
+            'id',
+            'description',
+            'priority',
+            'status',
+            'date_created',
+            'date_modified',
+            'category',
+            'department',
+            'milestone.name',
+            'worktimes',
+            'order',
+            'assignee',
+            'teamleader.name',
+            'followers',
+            'resources',
+            'planned_time',
+            'start_date',
+            'due_date',
+            'completion',
+            'lesson_learned',
+        )
+
+        column_formatters_export = dict(
+           worktimes=lambda v, c, m, p: '0' if m.worktimes is None else sum([h.duration for h in m.worktimes]),
+           id=lambda v, c, m, p: m.id[:4].upper(),
+       )
 
         column_labels = dict(worktimes='Total Worked Hours', id_short="#")
 
