@@ -198,10 +198,6 @@ def _display_description(cls, context, obj, name):   # pylint: disable=unused-ar
 def _colorize_diffs(diff):
     # adapted from https://github.com/kilink/ghdiff
     import six
-    import xml.sax.saxutils
-
-    def escape(text):
-        return xml.sax.saxutils.escape(text, {" ": "&nbsp;"})
 
     def _colorize(diff):
         if isinstance(diff, six.string_types):
