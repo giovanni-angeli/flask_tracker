@@ -108,11 +108,11 @@ def _handle_item_modification(form_, item, current_app):     # pylint: disable=n
                 b.sort(key=lambda x: x.name)
 
             if a != b:
-                if k == 'content':
+                if k in ('content', 'lesson_learned'):
                     b_ = '' if b is None else b.split('\n')
                     a_ = '' if a is None else a.split('\n')
-                    b = difflib.unified_diff(b_, a_, n=2,
-                                             fromfile='before', tofile='after', fromfiledate=time.asctime())
+                    b = difflib.unified_diff(
+                        b_, a_, n=2, fromfile='before', tofile='after', fromfiledate=time.asctime())
                     b = Markup("<br/>".join(b))
                 elif deflt_:
                     b = " --> {}".format(a)
@@ -653,6 +653,14 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
             form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={})
 
+            if isinstance(self, (ClaimView, TaskView)):
+                form_.lesson_learned = fields.TextAreaField(
+                    'lesson_learned',
+                    [validators.optional(), validators.length(max=ItemBase.content_max_len)],
+                    render_kw={
+                        "style": "background:#fff; border:dashed #DD3333 1px; height:300px;"},
+                )
+
             return form_
 
         @contextfunction
@@ -768,6 +776,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'machine_model': current_app.config.get('CLAIM_MACHINE_MODELS'),
             'status': current_app.config.get('ITEM_STATUSES'),
             'priority': current_app.config.get('ITEM_PRIORITIES'),
+            'department': current_app.config.get('DEPARTMENTS'),
         }
 
         column_searchable_list = (
@@ -784,8 +793,16 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'owner',
             'status',
             'priority',
+            'department',
+            'milestone',
             'customer',
+            'owner',
+            'teamleader',
             'followers',
+            'resources',
+            'start_date',
+            'due_date',
+            'completion',
             # ~ 'attachments',
             # ~ 'content',
             'contact',
@@ -796,12 +813,9 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'quantity',
             'damaged_group',
             'serial_number_of_damaged_part',
-            'customer',
-            'owner',
             'the_part_have_been_requested',
             'is_covered_by_warranty',
             # ~ 'modifications',
-            'followers',
         )
 
         column_list = (
@@ -830,7 +844,16 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'owner',
             'status',
             'priority',
+            'department',
+            'milestone',
             'customer',
+            'owner',
+            'teamleader',
+            'followers',
+            'resources',
+            'start_date',
+            'due_date',
+            'completion',
             'attachments',
             'content',
             'contact',
@@ -844,8 +867,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'the_part_have_been_requested',
             'is_covered_by_warranty',
             # ~ 'modifications',
-            'followers',
             'worktimes_claim',
+            'lesson_learned',
         )
 
         custom_row_actions = [
@@ -870,6 +893,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         column_formatters.update({
             'worktimes_claim': display_worktimes_claim,
         })
+
+        column_labels = dict(completion='Completion %')
 
     class TaskView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
 
@@ -943,6 +968,13 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'date_created',
             'date_modified',
             # ~ 'attachments',
+            'teamleader',
+            'resources',
+            'planned_time',
+            'start_date',
+            'due_date',
+            'completion',
+            'lesson_learned',
         )
 
         column_editable_list = (
@@ -981,9 +1013,15 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'order',
             'parent',
             'assignee',
+            'teamleader',
             'followers',
+            'resources',
             # ~ 'attachments',
             # ~ 'content',
+            'planned_time',
+            'start_date',
+            'due_date',
+            'completion',
         )
 
         column_labels = dict(worktimes='Total Worked Hours', id_short="#")
@@ -1020,6 +1058,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'milestone': display_milestone,
             'worktimes': display_worktimes,
         })
+
+        column_labels = dict(completion='Completion %')
 
     class ImprovementView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
         improvement_depts = (
@@ -1258,7 +1298,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             try:
                 value = json.loads(value)
                 for i in range(len(value)):
-                    if value[i][0] == 'content':
+                    # if value[i][0] == 'content' or value[i][0] == 'lesson_learned':
+                    if value[i][0] in ('content', 'lesson_learned'):
                         value[i][1] = _colorize_diffs(value[i][1])
 
                 LINE_FMTR = ''
