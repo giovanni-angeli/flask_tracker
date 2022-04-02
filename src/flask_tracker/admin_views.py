@@ -197,7 +197,7 @@ def _display_description(cls, context, obj, name):   # pylint: disable=unused-ar
 
 def _colorize_diffs(diff):
     # adapted from https://github.com/kilink/ghdiff
-    import six
+    import six #pylint: disable=import-outside-toplevel
 
     def _colorize(diff):
         if isinstance(diff, six.string_types):
@@ -1293,10 +1293,9 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             ret = value
             try:
                 value = json.loads(value)
-                for i in range(len(value)):
-                    # if value[i][0] == 'content' or value[i][0] == 'lesson_learned':
-                    if value[i][0] in ('content', 'lesson_learned'):
-                        value[i][1] = _colorize_diffs(value[i][1])
+                for i, v in enumerate(value):
+                    if v[0] in ('content', 'lesson_learned'):
+                        value[i][1] = _colorize_diffs(v[1])
 
                 LINE_FMTR = ''
                 LINE_FMTR += '<tr><td class="col-md-1">{}</td><td class="col-md-8">{}</td></tr>'
@@ -1403,7 +1402,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             ret = super().on_model_change(form_, obj, is_created)
             return ret
 
-    class RegistryView(TrackerModelView):
+    class RegistryView(TrackerModelView):   # pylint: disable=unused-variable, possibly-unused-variable
 
         column_list = (
             'created_by',
