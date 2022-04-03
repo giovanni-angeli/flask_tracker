@@ -746,6 +746,20 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'content': display_content,
         })
 
+        column_export_list = [
+            'name',
+            'id',
+            'description',
+            'priority',
+            'status',
+            'date_created',
+            'date_modified',
+        ]
+
+        column_formatters_export = dict(
+           id=lambda v, c, m, p: m.id[:4].upper(),
+       )
+
     class ClaimView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
 
         # ~ can_delete = current_app.config.get('CAN_DELETE_CLAIM', True)
@@ -873,15 +887,9 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'lesson_learned',
         )
 
-        column_export_list = (
-            'name',
-            'id',
-            'description',
-            'status',
+        column_export_list = ItemViewBase.column_export_list.copy()
+        column_export_list += [
             'customer',
-            'priority',
-            'date_created',
-            'date_modified',
             'machine_model',
             'serial_number',
             'installation_date',
@@ -896,11 +904,12 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'worktimes_claim',
             'completion',
             'lesson_learned',
-        )
+        ]
 
-        column_formatters_export = dict(
-           worktimes_claim=lambda v, c, m, p: '0' if m.worktimes_claim is None else sum([h.duration for h in m.worktimes_claim]),
-           id=lambda v, c, m, p: m.id[:4].upper(),
+        column_formatters_export = ItemViewBase.column_formatters_export.copy()
+        column_formatters_export.update(
+            dict(worktimes_claim=lambda v, c, m, p: '0' if m.worktimes_claim is None else sum([h.duration for h in m.worktimes_claim]),
+            )
         )
 
         custom_row_actions = [
@@ -1056,14 +1065,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'completion',
         )
 
-        column_export_list = (
-            'name',
-            'id',
-            'description',
-            'priority',
-            'status',
-            'date_created',
-            'date_modified',
+        column_export_list = ItemViewBase.column_export_list.copy()
+        column_export_list += [
             'category',
             'department',
             'milestone.name',
@@ -1078,12 +1081,13 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'due_date',
             'completion',
             'lesson_learned',
-        )
+        ]
 
-        column_formatters_export = dict(
-           worktimes=lambda v, c, m, p: '0' if m.worktimes is None else sum([h.duration for h in m.worktimes]),
-           id=lambda v, c, m, p: m.id[:4].upper(),
-       )
+        column_formatters_export = ItemViewBase.column_formatters_export.copy()
+        column_formatters_export.update(
+            dict(worktimes=lambda v, c, m, p: '0' if m.worktimes is None else sum([h.duration for h in m.worktimes]),
+            )
+        )
 
         column_labels = dict(worktimes='Total Worked Hours', id_short="#")
 
