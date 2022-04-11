@@ -1,4 +1,4 @@
-"""asd
+"""add more column to Claim and Task
 
 Revision ID: c7eee17c2081
 Revises: c0f674a8ae39
