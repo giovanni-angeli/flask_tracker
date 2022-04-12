@@ -31,7 +31,7 @@ except Exception:
     from werkzeug import secure_filename  # pylint: disable=import-error, no-name-in-module
 
 from jinja2 import contextfunction   # pylint: disable=import-error
-from flask import Markup   # pylint: disable=import-error
+from flask import (Markup, url_for)   # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
 import flask_login  # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
@@ -674,6 +674,14 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 ret = Markup(ret)
             elif name == 'attachments':
                 ret = model.formatted_attach_names
+
+                html_ret = ""
+                for a in ret:
+                    html_ = '<a href="{}" target="_blank" rel="noopener noreferrer">{}</a></br>'.format(
+                        url_for('attachment', filename=a), a)
+                    html_ret += Markup(html_)
+                ret = html_ret
+
             return ret
 
         def on_model_change(self, form_, obj, is_created):
@@ -1008,7 +1016,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'worktimes',
             'date_created',
             'date_modified',
-            # ~ 'attachments',
+            'attachments',
             'teamleader',
             'resources',
             'planned_time',
