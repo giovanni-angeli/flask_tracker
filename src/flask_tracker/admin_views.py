@@ -766,7 +766,16 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
         column_formatters_export = dict(
            id=lambda v, c, m, p: m.id[:4].upper(),
-       )
+        )
+
+        form_args = {
+            'due_date': {
+                'description': 'Due Date must have the following format: aaaa-mm-gg hh:mm:ss',
+            },
+            'start_date': {
+                'description': 'Start Date must have the following format: aaaa-mm-gg hh:mm:ss',
+            }
+        }
 
     class ClaimView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
 
@@ -789,11 +798,14 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'damaged_group',
         )
 
-        form_args = {
-            'contact': {
-                'label': 'Contact (email)',
-            },
-        }
+        form_args = ItemViewBase.form_args.copy()
+        form_args.update(
+            {
+                'contact': {
+                    'label': 'Contact (email)',
+                },
+            }
+        )
 
         form_choices = {
             'damaged_group': current_app.config.get('CLAIM_GROUPS'),
@@ -968,11 +980,19 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'category',
         )
 
-        form_args = {
-            'category': {
-                'description': current_app.config.get('CATEGORY_DESCRIPTION', 'missing description.'),
-            },
-        }
+        # form_args = {
+        #     'category': {
+        #         'description': current_app.config.get('CATEGORY_DESCRIPTION', 'missing description.'),
+        #     },
+        # }
+        form_args = ItemViewBase.form_args.copy()
+        form_args.update(
+            {
+                'category': {
+                    'description': current_app.config.get('CATEGORY_DESCRIPTION', 'missing description.'),
+                },
+            }
+        )
 
         form_choices = {
             'department': current_app.config.get('DEPARTMENTS'),
