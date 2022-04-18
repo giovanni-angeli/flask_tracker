@@ -1077,7 +1077,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         column_export_list += [
             'category',
             'department',
-            'milestone.name',
+            'milestone',
             'worktimes',
             'order',
             'assignee',
@@ -1287,6 +1287,17 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'due_date',
             'followers',
         )
+
+        column_export_list = ItemViewBase.column_export_list.copy()
+        column_export_list += [
+            'department',
+            'target_department',
+            'customer',
+            'author',
+            'assignee',
+            'followers',
+            'machine_model',
+        ]
 
         column_formatters = ItemViewBase.column_formatters.copy()
         column_formatters.update({
