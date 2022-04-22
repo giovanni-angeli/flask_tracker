@@ -1,8 +1,7 @@
 # coding: utf-8
 
 # pylint: disable=missing-docstring
-# pylint: disable=logging-format-interpolation
-# pylint: disable=consider-using-f-string
+# pylint: disable=logging-format-interpolation, consider-using-f-string, logging-fstring-interpolation
 # pylint: disable=line-too-long
 # pylint: disable=invalid-name
 # pylint: disable=too-many-arguments
@@ -13,15 +12,16 @@ import logging
 import traceback
 import json
 import time
+import os
 from datetime import datetime, timedelta
 from urllib.parse import quote
 from functools import wraps
 
 import markdown  # pylint: disable=import-error
 from werkzeug.security import check_password_hash  # pylint: disable=import-error
-from flask import (Markup, url_for, redirect, request, current_app, send_from_directory)  # pylint: disable=import-error
+from werkzeug.utils import secure_filename # pylint: disable=import-error
+from flask import (Markup, url_for, redirect, request, current_app, send_from_directory, jsonify)  # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
-
 from isoweek import Week          # pylint: disable=import-error
 
 import flask_login  # pylint: disable=import-error
@@ -411,7 +411,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         return redirect(url_)
 
 
-def init_admin(app, db):
+def init_admin(app, db):    # pylint: disable=too-many-statements
 
     login_manager = flask_login.LoginManager()
     login_manager.init_app(app)
@@ -452,5 +452,64 @@ def init_admin(app, db):
     @app.route('/attachment/<path:filename>')
     def attachment(filename):               # pylint: disable=unused-variable
         return send_from_directory(app.config['ATTACHMENT_PATH'], filename)
+
+    @app.route('/ajax_upload_attachments', methods=('POST', ))
+    def upload_attachments():
+
+        resp = {}
+
+        if request.method == 'POST':
+            logging.warning('this request is a POST')
+            files = request.files.getlist('file[]')
+            logging.warning(f'files >> {files}')
+
+            _id = None
+            _model = None
+            if hasattr(request, 'form'):
+
+                _id = request.form.get('id', None)
+                _model = request.form.get('model', None)
+
+                map_attch_attr = {
+                    'task': 'attached_id',
+                    'claim': 'claimed_id',
+                }
+
+                try:
+                    html_response = ''
+                    for file in files:
+                        filename = secure_filename(file.filename)
+                        file.save(os.path.join(app.config.get('ATTACHMENT_PATH'), filename))
+                        logging.warning(f"created file {filename} on {app.config.get('ATTACHMENT_PATH')}")
+                        logging.debug(f'model {_model} - {_id}')
+
+                        attch_kwargs = {
+                            'name':filename,
+                            map_attch_attr[_model]: _id
+                        }
+
+                        attch = Attachment(**attch_kwargs)
+                        db.session.add(attch)
+                        db.session.commit()
+                        logging.warning(f'Attachment {attch} created on db.')
+
+                        file_url = url_for('attachment', filename=filename)
+                        elem = '<a class="form-control" href="' + f"{file_url}" + f'"> [{filename}]({file_url}) </a> '
+                        html_response += Markup(elem)
+
+                    resp = jsonify({
+                        'message' : 'File(s) uploaded successfully!',
+                        'html_response': html_response
+                    })
+                    resp.status_code = 201
+
+                except Exception as e:
+                    logging.error(e)
+                    resp = jsonify({
+                        'message' : f'{e}',
+                    })
+                    resp.status_code = 500
+
+        return resp
 
     return admin_
