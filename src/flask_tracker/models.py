@@ -565,6 +565,7 @@ class Attachment(NamedModel, sqlalchemy_Model):     # pylint: disable=too-few-pu
     db = MODELS_GLOBAL_CONTEXT['db']
     attached_id = db.Column(db.Unicode, db.ForeignKey('task.id'))
     claimed_id = db.Column(db.Unicode, db.ForeignKey('claim.id'))
+    improved_id = db.Column(db.Unicode, db.ForeignKey('improvement.id'))
 
 
 class History(BaseModel, sqlalchemy_Model):     # pylint: disable=too-few-public-methods
@@ -666,6 +667,7 @@ class Improvement(ItemBase, sqlalchemy_Model):     # pylint: disable=too-few-pub
     # notifier_id = db.Column(db.Unicode, db.ForeignKey('user.id'))
     followers = db.relationship('User', secondary=notifyings, backref='notified')
     modifications = db.relationship('History', backref='improvement', cascade="all, delete-orphan")
+    attachments = db.relationship('Attachment', backref='improved')
 
 
 class Registry(BaseModel, sqlalchemy_Model):

@@ -505,8 +505,9 @@ def init_admin(app, db):    # pylint: disable=too-many-statements
 
                 except Exception as e:
                     logging.error(e)
+                    logging.error(traceback.format_exc())
                     resp = jsonify({
-                        'message' : f'{e}',
+                        'message' : f'{traceback.format_exc()}',
                     })
                     resp.status_code = 500
 
