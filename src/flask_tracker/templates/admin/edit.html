@@ -119,8 +119,17 @@
                     var url_search = window.location.search
                     var url_params = new URLSearchParams(url_search)
 
-                    form_data.append('id', url_params.get('id'))
-                    form_data.append('model', url_params.get('url').replace(/\//g, ''))
+                    var model_id = url_params.get('id')
+                    var model_name = url_params.get('url')
+
+                    if (model_name.includes("?")){
+                        // remove filters from url
+                        // e.g. /task/?flt0_assignee_user_name_equals=admin&flt1_status_not_in_list=closed%2Cinvalid
+                        model_name = model_name.split('?')[0]
+                    }
+
+                    form_data.append('id', model_id)
+                    form_data.append('model', model_name.replace(/\//g, ''))
                     console.debug('files: ', document.getElementById('multiFiles').files)
                     console.debug('model name: ', url_params.get('url'))
                     console.debug('model id: ', url_params.get('id'))
