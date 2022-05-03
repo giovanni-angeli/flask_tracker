@@ -410,6 +410,68 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
         url_ = "/task/?search={}".format(key)
         return redirect(url_)
 
+    @flask_admin.expose('/admin_upload_attachments', methods=('POST', ))
+    @check_login
+    def upload_attachments(self, ):     # pylint: disable=no-self-use
+
+        resp = {}
+
+        if request.method == 'POST':
+            logging.warning('this request is a POST')
+            files = request.files.getlist('file[]')
+            logging.warning(f'files >> {files}')
+
+            session = MODELS_GLOBAL_CONTEXT['session']
+            _id = None
+            _model = None
+            if hasattr(request, 'form'):
+
+                _id = request.form.get('id', None)
+                _model = request.form.get('model', None)
+
+                map_attch_attr = {
+                    'task': 'attached_id',
+                    'claim': 'claimed_id',
+                }
+
+                try:
+                    html_response = ''
+                    for file in files:
+                        filename = secure_filename(file.filename)
+                        file.save(os.path.join(current_app.config.get('ATTACHMENT_PATH'), filename))
+                        logging.warning(f"created file {filename} on {current_app.config.get('ATTACHMENT_PATH')}")
+                        logging.debug(f'model {_model} - {_id}')
+
+                        attch_kwargs = {
+                            'name':filename,
+                            map_attch_attr[_model]: _id
+                        }
+
+                        attch = Attachment(**attch_kwargs)
+                        session.add(attch)
+                        session.commit()
+                        logging.warning(f'Attachment {attch} created on db.')
+
+                        file_url = url_for('attachment', filename=filename)
+                        elem = '<a class="form-control" href="' + f"{file_url}" + f'"> [{filename}]({file_url}) </a> '
+                        html_response += Markup(elem)
+
+                    resp = jsonify({
+                        'message' : 'File(s) uploaded successfully!',
+                        'html_response': html_response
+                    })
+                    resp.status_code = 201
+
+                except Exception as e:
+                    logging.error(e)
+                    logging.error(traceback.format_exc())
+                    resp = jsonify({
+                        'message' : f'{traceback.format_exc()}',
+                    })
+                    resp.status_code = 500
+
+        return resp
+
 
 def init_admin(app, db):    # pylint: disable=too-many-statements
 
@@ -452,65 +514,5 @@ def init_admin(app, db):    # pylint: disable=too-many-statements
     @app.route('/attachment/<path:filename>')
     def attachment(filename):               # pylint: disable=unused-variable
         return send_from_directory(app.config['ATTACHMENT_PATH'], filename)
-
-    @app.route('/ajax_upload_attachments', methods=('POST', ))
-    def upload_attachments():
-
-        resp = {}
-
-        if request.method == 'POST':
-            logging.warning('this request is a POST')
-            files = request.files.getlist('file[]')
-            logging.warning(f'files >> {files}')
-
-            _id = None
-            _model = None
-            if hasattr(request, 'form'):
-
-                _id = request.form.get('id', None)
-                _model = request.form.get('model', None)
-
-                map_attch_attr = {
-                    'task': 'attached_id',
-                    'claim': 'claimed_id',
-                }
-
-                try:
-                    html_response = ''
-                    for file in files:
-                        filename = secure_filename(file.filename)
-                        file.save(os.path.join(app.config.get('ATTACHMENT_PATH'), filename))
-                        logging.warning(f"created file {filename} on {app.config.get('ATTACHMENT_PATH')}")
-                        logging.debug(f'model {_model} - {_id}')
-
-                        attch_kwargs = {
-                            'name':filename,
-                            map_attch_attr[_model]: _id
-                        }
-
-                        attch = Attachment(**attch_kwargs)
-                        db.session.add(attch)
-                        db.session.commit()
-                        logging.warning(f'Attachment {attch} created on db.')
-
-                        file_url = url_for('attachment', filename=filename)
-                        elem = '<a class="form-control" href="' + f"{file_url}" + f'"> [{filename}]({file_url}) </a> '
-                        html_response += Markup(elem)
-
-                    resp = jsonify({
-                        'message' : 'File(s) uploaded successfully!',
-                        'html_response': html_response
-                    })
-                    resp.status_code = 201
-
-                except Exception as e:
-                    logging.error(e)
-                    logging.error(traceback.format_exc())
-                    resp = jsonify({
-                        'message' : f'{traceback.format_exc()}',
-                    })
-                    resp.status_code = 500
-
-        return resp
 
     return admin_
