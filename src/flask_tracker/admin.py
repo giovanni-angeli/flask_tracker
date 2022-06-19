@@ -432,6 +432,7 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
                 map_attch_attr = {
                     'task': 'attached_id',
                     'claim': 'claimed_id',
+                    'improvement': 'improved_id',
                 }
 
                 try:
