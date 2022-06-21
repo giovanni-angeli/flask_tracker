@@ -1290,6 +1290,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'customer',
             'assignee',
             # 'notifier',
+            'attachments',
         )
 
         # ~ form_excluded_columns = (
