@@ -31,7 +31,7 @@ except Exception:
     from werkzeug import secure_filename  # pylint: disable=import-error, no-name-in-module
 
 from jinja2 import contextfunction   # pylint: disable=import-error
-from flask import Markup   # pylint: disable=import-error
+from flask import (Markup, url_for)   # pylint: disable=import-error
 from wtforms import (form, fields, validators)  # pylint: disable=import-error
 import flask_login  # pylint: disable=import-error
 from flask_admin.contrib.sqla import ModelView  # pylint: disable=import-error
@@ -108,11 +108,11 @@ def _handle_item_modification(form_, item, current_app):     # pylint: disable=n
                 b.sort(key=lambda x: x.name)
 
             if a != b:
-                if k == 'content':
+                if k in ('content', 'lesson_learned'):
                     b_ = '' if b is None else b.split('\n')
                     a_ = '' if a is None else a.split('\n')
-                    b = difflib.unified_diff(b_, a_, n=2,
-                                             fromfile='before', tofile='after', fromfiledate=time.asctime())
+                    b = difflib.unified_diff(
+                        b_, a_, n=2, fromfile='before', tofile='after', fromfiledate=time.asctime())
                     b = Markup("<br/>".join(b))
                 elif deflt_:
                     b = " --> {}".format(a)
@@ -197,11 +197,7 @@ def _display_description(cls, context, obj, name):   # pylint: disable=unused-ar
 
 def _colorize_diffs(diff):
     # adapted from https://github.com/kilink/ghdiff
-    import six
-    import xml.sax.saxutils
-
-    def escape(text):
-        return xml.sax.saxutils.escape(text, {" ": "&nbsp;"})
+    import six #pylint: disable=import-outside-toplevel
 
     def _colorize(diff):
         if isinstance(diff, six.string_types):
@@ -299,7 +295,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
         can_view_details = True
         can_export = True
         export_max_rows = 1000
-        export_types = ['csv', 'xls', 'json']
+        export_types = ['csv', 'json']
 
         details_template = "admin/details.html"
         list_template = 'admin/list.html'
@@ -435,6 +431,9 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'task',
         ]
 
+        column_export_list = WorkTimeBaseView.column_list.copy()
+        column_export_list += ['task.name']
+
         def display_task(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
             value = getattr(obj, name)
             ret = value
@@ -461,6 +460,9 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
         column_filters = WorkTimeBaseView.column_filters.copy()
         column_filters += ['claim', ]
+
+        column_export_list = WorkTimeBaseView.column_list.copy()
+        column_export_list += ['claim.name']
 
         def display_claim(self, context, obj, name):   # pylint: disable=unused-argument, no-self-use
             value = getattr(obj, name)
@@ -653,6 +655,14 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
 
             form_.preview_content_button = fields.BooleanField(u'preview content', [], render_kw={})
 
+            if isinstance(self, (ClaimView, TaskView)):
+                form_.lesson_learned = fields.TextAreaField(
+                    'lesson_learned',
+                    [validators.optional(), validators.length(max=ItemBase.content_max_len)],
+                    render_kw={
+                        "style": "background:#fff; border:dashed #DD3333 1px; height:300px;"},
+                )
+
             return form_
 
         @contextfunction
@@ -664,6 +674,14 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
                 ret = Markup(ret)
             elif name == 'attachments':
                 ret = model.formatted_attach_names
+
+                html_ret = ""
+                for a in ret:
+                    html_ = '<a href="{}" target="_blank" rel="noopener noreferrer">{}</a></br>'.format(
+                        url_for('attachment', filename=a), a)
+                    html_ret += Markup(html_)
+                ret = html_ret
+
             return ret
 
         def on_model_change(self, form_, obj, is_created):
@@ -736,6 +754,29 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'content': display_content,
         })
 
+        column_export_list = [
+            'name',
+            'id',
+            'description',
+            'priority',
+            'status',
+            'date_created',
+            'date_modified',
+        ]
+
+        column_formatters_export = dict(
+           id=lambda v, c, m, p: m.id[:4].upper(),
+        )
+
+        form_args = {
+            'due_date': {
+                'description': 'Due Date must have the following format: aaaa-mm-gg hh:mm:ss',
+            },
+            'start_date': {
+                'description': 'Start Date must have the following format: aaaa-mm-gg hh:mm:ss',
+            }
+        }
+
     class ClaimView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
 
         # ~ can_delete = current_app.config.get('CAN_DELETE_CLAIM', True)
@@ -757,17 +798,21 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'damaged_group',
         )
 
-        form_args = {
-            'contact': {
-                'label': 'Contact (email)',
-            },
-        }
+        form_args = ItemViewBase.form_args.copy()
+        form_args.update(
+            {
+                'contact': {
+                    'label': 'Contact (email)',
+                },
+            }
+        )
 
         form_choices = {
             'damaged_group': current_app.config.get('CLAIM_GROUPS'),
             'machine_model': current_app.config.get('CLAIM_MACHINE_MODELS'),
             'status': current_app.config.get('ITEM_STATUSES'),
             'priority': current_app.config.get('ITEM_PRIORITIES'),
+            'department': current_app.config.get('DEPARTMENTS'),
         }
 
         column_searchable_list = (
@@ -784,8 +829,16 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'owner',
             'status',
             'priority',
+            'department',
+            'milestone',
             'customer',
+            'owner',
+            'teamleader',
             'followers',
+            'resources',
+            'start_date',
+            'due_date',
+            'completion',
             # ~ 'attachments',
             # ~ 'content',
             'contact',
@@ -796,12 +849,9 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'quantity',
             'damaged_group',
             'serial_number_of_damaged_part',
-            'customer',
-            'owner',
             'the_part_have_been_requested',
             'is_covered_by_warranty',
             # ~ 'modifications',
-            'followers',
         )
 
         column_list = (
@@ -830,7 +880,16 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'owner',
             'status',
             'priority',
+            'department',
+            'milestone',
             'customer',
+            'owner',
+            'teamleader',
+            'followers',
+            'resources',
+            'start_date',
+            'due_date',
+            'completion',
             'attachments',
             'content',
             'contact',
@@ -844,8 +903,33 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'the_part_have_been_requested',
             'is_covered_by_warranty',
             # ~ 'modifications',
-            'followers',
             'worktimes_claim',
+            'lesson_learned',
+        )
+
+        column_export_list = ItemViewBase.column_export_list.copy()
+        column_export_list += [
+            'customer',
+            'machine_model',
+            'serial_number',
+            'installation_date',
+            'damaged_group',
+            'owner',
+            'teamleader.name',
+            'followers',
+            'resources',
+            'planned_time',
+            'start_date',
+            'due_date',
+            'worktimes_claim',
+            'completion',
+            'lesson_learned',
+        ]
+
+        column_formatters_export = ItemViewBase.column_formatters_export.copy()
+        column_formatters_export.update(
+            dict(worktimes_claim=lambda v, c, m, p: '0' if m.worktimes_claim is None else sum([h.duration for h in m.worktimes_claim]),
+            )
         )
 
         custom_row_actions = [
@@ -871,6 +955,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'worktimes_claim': display_worktimes_claim,
         })
 
+        column_labels = dict(completion='Completion %')
+
     class TaskView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
 
         column_sortable_list = (
@@ -894,11 +980,19 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'category',
         )
 
-        form_args = {
-            'category': {
-                'description': current_app.config.get('CATEGORY_DESCRIPTION', 'missing description.'),
-            },
-        }
+        # form_args = {
+        #     'category': {
+        #         'description': current_app.config.get('CATEGORY_DESCRIPTION', 'missing description.'),
+        #     },
+        # }
+        form_args = ItemViewBase.form_args.copy()
+        form_args.update(
+            {
+                'category': {
+                    'description': current_app.config.get('CATEGORY_DESCRIPTION', 'missing description.'),
+                },
+            }
+        )
 
         form_choices = {
             'department': current_app.config.get('DEPARTMENTS'),
@@ -942,7 +1036,14 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'worktimes',
             'date_created',
             'date_modified',
-            # ~ 'attachments',
+            'attachments',
+            'teamleader',
+            'resources',
+            'planned_time',
+            'start_date',
+            'due_date',
+            'completion',
+            'lesson_learned',
         )
 
         column_editable_list = (
@@ -981,9 +1082,39 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'order',
             'parent',
             'assignee',
+            'teamleader',
             'followers',
+            'resources',
             # ~ 'attachments',
             # ~ 'content',
+            'planned_time',
+            'start_date',
+            'due_date',
+            'completion',
+        )
+
+        column_export_list = ItemViewBase.column_export_list.copy()
+        column_export_list += [
+            'category',
+            'department',
+            'milestone',
+            'worktimes',
+            'order',
+            'assignee',
+            'teamleader.name',
+            'followers',
+            'resources',
+            'planned_time',
+            'start_date',
+            'due_date',
+            'completion',
+            'lesson_learned',
+        ]
+
+        column_formatters_export = ItemViewBase.column_formatters_export.copy()
+        column_formatters_export.update(
+            dict(worktimes=lambda v, c, m, p: '0' if m.worktimes is None else sum([h.duration for h in m.worktimes]),
+            )
         )
 
         column_labels = dict(worktimes='Total Worked Hours', id_short="#")
@@ -1020,6 +1151,8 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'milestone': display_milestone,
             'worktimes': display_worktimes,
         })
+
+        column_labels = dict(completion='Completion %')
 
     class ImprovementView(ItemViewBase):     # pylint: disable=unused-variable, possibly-unused-variable
         improvement_depts = (
@@ -1157,6 +1290,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'customer',
             'assignee',
             # 'notifier',
+            'attachments',
         )
 
         # ~ form_excluded_columns = (
@@ -1174,6 +1308,17 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             'due_date',
             'followers',
         )
+
+        column_export_list = ItemViewBase.column_export_list.copy()
+        column_export_list += [
+            'department',
+            'target_department',
+            'customer',
+            'author',
+            'assignee',
+            'followers',
+            'machine_model',
+        ]
 
         column_formatters = ItemViewBase.column_formatters.copy()
         column_formatters.update({
@@ -1257,9 +1402,9 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             ret = value
             try:
                 value = json.loads(value)
-                for i in range(len(value)):
-                    if value[i][0] == 'content':
-                        value[i][1] = _colorize_diffs(value[i][1])
+                for i, v in enumerate(value):
+                    if v[0] in ('content', 'lesson_learned'):
+                        value[i][1] = _colorize_diffs(v[1])
 
                 LINE_FMTR = ''
                 LINE_FMTR += '<tr><td class="col-md-1">{}</td><td class="col-md-8">{}</td></tr>'
@@ -1366,7 +1511,7 @@ def define_view_classes(current_app):  # pylint: disable=too-many-statements
             ret = super().on_model_change(form_, obj, is_created)
             return ret
 
-    class RegistryView(TrackerModelView):
+    class RegistryView(TrackerModelView):   # pylint: disable=unused-variable, possibly-unused-variable
 
         column_list = (
             'created_by',

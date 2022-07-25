@@ -90,6 +90,78 @@
             e.setAttribute("style", "background:#FFFFEE; border:dashed #333333 1px;");
             document.getElementById('content').parentNode.appendChild(e);
 
+            var container_attm_form = document.createElement("div");
+            container_attm_form.innerHTML = "";
+            if (e_a) {
+                container_attm_form.innerHTML += '<form id="upload-file" method="post" enctype="multipart/form-data"> \
+                    <fieldset> \
+                        <label for="file[]">Select a file(s)</label> \
+                        <input id="multiFiles" name="file[]" type="file" multiple="true"> \
+                    </fieldset> \
+                    <fieldset> \
+                        <button id="upload-file-btn" type="button">Upload</button> \
+                    </fieldset> \
+                    <p id="msg"></p> \
+                </form>'
+
+                e_a.parentNode.appendChild(container_attm_form);
+            }
+
+            $(function() {
+                $('#upload-file-btn').click(function() {
+                    var form_data = new FormData($('#upload-file')[0]);
+                    var ins = document.getElementById('multiFiles').files.length;
+                    if(ins == 0) {
+                        $('#msg').html('<span style="color:red; font-weight: bold;">Select at least one file !</span>');
+                        return;
+                    }
+
+                    var url_search = window.location.search
+                    var url_params = new URLSearchParams(url_search)
+
+                    var model_id = url_params.get('id')
+                    var model_name = url_params.get('url')
+
+                    if (model_name.includes("?")){
+                        // remove filters from url
+                        // e.g. /task/?flt0_assignee_user_name_equals=admin&flt1_status_not_in_list=closed%2Cinvalid
+                        model_name = model_name.split('?')[0]
+                    }
+
+                    form_data.append('id', model_id)
+                    form_data.append('model', model_name.replace(/\//g, ''))
+                    console.debug('files: ', document.getElementById('multiFiles').files)
+                    console.debug('model name: ', url_params.get('url'))
+                    console.debug('model id: ', url_params.get('id'))
+                    $.ajax({
+                        type: 'POST',
+                        url: '/admin_upload_attachments',
+                        data: form_data,
+                        contentType: false,
+                        cache: false,
+                        processData: false,
+                        async: false,
+                        success: function(data) {
+                            console.log('Success!');
+                            console.debug(data.html_response)
+                            console.debug(data.responseJSON)
+                            if(e_a && data.html_response && data.message){
+                                $('#msg').html('<span style="color:green; font-weight: bold;">'+data.message+'</span>');
+                                div_.innerHTML += data.html_response
+                            }
+                        },
+                        error: function(data) {
+                            console.log('Error!');
+                            console.debug(data.responseJSON.message)
+                            if(e_a && data.responseJSON.message){
+                                $('#msg').html('<span style="color:red; font-weight: bold;">ERROR! '+data.responseJSON.message+'</span>');
+                            } 
+                        },
+                    });
+                });
+            });
+
+
             console.log("init()");
         }
 

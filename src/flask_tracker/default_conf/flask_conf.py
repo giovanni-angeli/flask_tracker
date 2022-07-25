@@ -63,7 +63,7 @@ with sample_task_content_file_path.open('rt') as f:
 # ~ DATA_PATH =  '/mnt/dati/flask_tracker/data'
 DATA_PATH = '/opt/flask_tracker/data'
 
-database_file_ = os.path.join(DATA_PATH, 'tracker.vX.sqlite')
+database_file_ = os.path.join(DATA_PATH, 'tracker.v10.sqlite')
 wiki_contents_dir_ = os.path.join(DATA_PATH, 'wiki')
 
 # ~ ######################################
@@ -229,12 +229,14 @@ ROLE_CAPABILITY_MAP = {
         'order': '*',
         'attachment': '*',
         'claim': 'rce',
+        'work_time_claim': 'rce',
         'improvement': 'rce',
     },
     'service': {
         'default': '',
         'attachment': '*',
         'claim': '*',
+        'work_time_claim': 'rce',
         'improvement': '*',
         'history': 'r',
     },
