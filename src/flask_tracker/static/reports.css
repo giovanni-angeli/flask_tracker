@@ -1,0 +1,88 @@
+/*.tab {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+}
+
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+}
+
+.tab button:hover {
+  background-color: #ddd;
+}
+
+.tab button.active {
+  background-color: #ccc;
+}
+
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+  height: 90vh;
+}*/
+
+/* TABLE CSS*/
+
+#table-status-tasks{
+  margin-top: 20px;
+}
+
+.table-status-tasks-td{
+  border: 3px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+/* SIDE NAV */
+.sidenav {
+  height: 100%;
+  width: 160px;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: #111;
+  overflow-x: hidden;
+  padding-top: 20px;
+}
+
+.sidenav a {
+  padding: 6px 8px 6px 16px;
+  text-decoration: none;
+  font-size: 25px;
+  color: #818181;
+  display: block;
+}
+
+.sidenav a:hover {
+  color: #f1f1f1;
+}
+
+
+
+.flex-container {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: 165px;
+  width: 70%
+}
+
+#filters {
+  margin-top: 35px;
+  margin-left: 165px;
+  display: none;
+  /*display: inline-block;*/
+}
+
+.filters_btn {
+  display: inline-block;
+}

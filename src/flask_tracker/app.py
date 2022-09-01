@@ -15,7 +15,7 @@ import flask_migrate                 # pylint: disable=import-error
 from flask import Flask  # pylint: disable=import-error
 
 from flask_tracker.models import (init_orm, get_package_version)
-
+from flask_tracker.api import init_restless_api
 from flask_tracker.admin import init_admin
 
 from flask_tracker.email_client import EMailClient
@@ -69,11 +69,24 @@ def _init_app(argv):
     db = init_orm(app)
     init_admin(app, db)
 
+
     flask_migrate_ = flask_migrate.Migrate(compare_type=True)
     flask_migrate_.init_app(app, db, render_as_batch=True)
 
     wiki_blueprint.template_folder = os.path.join(HERE, 'wiki', 'templates')
     app.register_blueprint(wiki_blueprint, url_prefix='/wiki')
+
+    app.app_context().push()
+
+    # cls_models = [mapper.class_ for mapper in db.Model.registry.mappers]
+    # for mapper in db.Model.registry.mappers:
+    #     logging.warning(mapper.__dict__)
+
+    init_restless_api(app, db)
+
+    # for r in app.url_map.iter_rules():
+    #     if 'api' in r.rule:
+    #         logging.warning(f'{r.endpoint}: ({r.rule}, {list(r.methods)})')
 
     return app
 

@@ -35,7 +35,9 @@ INSTALL_REQUIRES = [
     'email_validator',
     'markdown',
     'unidecode',
-    'flask-migrate']
+    'flask-migrate',
+    'flask_restful',
+]
 
 SETUP_KW_ARGS = {
     'name': 'flask_tracker',

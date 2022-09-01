@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FT Reports</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='reports.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='select2.min.css') }}" />
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='reports.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='chart.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='select2.full.min.js') }}"></script>
+  </head>
+
+  <body onload="init_html()">
+
+    <div class="sidenav">
+      <a href="javascript:showTasksByStatus();">Status Tasks</a>
+      <a href="#">Status Claim</a>
+    </div>
+
+    <div class="main">
+      <div class="flex-container">
+        <table id="table-status-tasks">
+          <tbody></tbody>
+        </table>
+        <div id="canvas-holder" style="width:40%;">
+          <canvas id="chart-area" />
+        </div>
+      </div>
+      <div id="filters">
+        <div>
+          <label for="filter-by-milestone">
+            Filter by milestones
+          </label>
+          <br>
+          <select id="filter-by-milestone" class="js-example-placeholder-multiple js-states form-control" style="width: 30%" multiple="multiple">
+          </select>
+        </div>
+        
+        <div>
+          <label for="filter-by-project">
+            Filter by project
+          </label>
+          <br>
+          <select id="filter-by-project" class="js-example-placeholder-multiple js-states form-control" style="width: 30%" multiple="multiple">
+          </select>
+        </div>
+        <br>
+        <button type="button" class="filters_btn" onclick="applyFilter()">Apply Filters</button>
+        <button type="button" class="filters_btn" onclick="resetFilter()">Reset Filter</button>
+      </div>
+    </div>
+      
+
+
+    <script type="text/javascript">
+      console.log('script at the end of the body')
+      // var tasks = {{tasks}}
+    </script>
+  </body>
+</html>

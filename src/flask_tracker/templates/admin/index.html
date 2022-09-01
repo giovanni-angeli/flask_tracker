@@ -194,10 +194,11 @@
     }
 
     var reports_btn_clicked = function(){
-        var url = "/report";
+        var url = "/reports";
         var title = "Report";
-        var options = "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,top="+(80)+",left="+(120);
-        var win = window.open(url, title, options);
+        // var options = "toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,top="+(80)+",left="+(120);
+        // var win = window.open(url, title, options);
+        var win = window.open(url, title);
     }
     var add_hours_btn_clicked = function(){
         var hours_to_add = document.getElementById('hours_to_add').value;

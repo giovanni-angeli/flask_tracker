@@ -473,6 +473,34 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
 
         return resp
 
+    @flask_admin.expose('/reports', methods=('GET', ))
+    @check_login
+    def report_query_test(self):
+
+        session = MODELS_GLOBAL_CONTEXT['session']
+
+        tasks = [t.object_to_json(include_relationship=1) for t in session.query(Task)]
+        # tasks = [t for t in session.query(Task)]
+        # project_names = [p.name for p in session.query(Project).limit(50)]
+        # order_names = [o.name for o in session.query(Order).limit(50)]
+        # user_names = [o.name for o in session.query(User).limit(50)]
+        # logging.warning(f'tasks >> {tasks}')
+
+
+        ctx = {
+            # 'projects': project_names,
+            # 'orders': order_names,
+            # 'users': user_names,
+            # 'report_title': 'report 000',
+            # 'report_results': []
+            'tasks': tasks,
+            'total_tasks': len(tasks) 
+        }
+
+        ret = self.render('admin/reports.html', **ctx)
+
+        return ret
+
 
 def init_admin(app, db):    # pylint: disable=too-many-statements
 

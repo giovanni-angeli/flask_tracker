@@ -352,19 +352,53 @@ class BaseModel():                         # pylint: disable=too-few-public-meth
 
     id_short = property(get_id_short)
 
-    def object_to_json(self, indent=2):
-        data = self.object_to_dict()
-        return json.dumps(data, indent=indent)
+    def object_to_json(self, indent=2, include_relationship=0, excluded_fields=None):
+        data = self.object_to_dict(
+            include_relationship=include_relationship,
+            excluded_fields=excluded_fields)
+        return json.dumps(data, indent=indent, default=str)
 
-    def object_to_dict(self):
+    def object_to_dict(self, include_relationship=0, excluded_fields=None):
 
-        data = {c.key: getattr(self, c.key)
-                for c in inspect(self).mapper.column_attrs}
-        # ~ for c in inspect(self).mapper.column_attrs if getattr(self, c.key) is not None}
+        # data = {c.key: getattr(self, c.key)
+        #         for c in inspect(self).mapper.column_attrs}
+        # # ~ for c in inspect(self).mapper.column_attrs if getattr(self, c.key) is not None}
 
-        for k in data.keys():
-            if isinstance(data[k], datetime):
-                data[k] = data[k].isoformat()
+        # for k in data.keys():
+        #     if isinstance(data[k], datetime):
+        #         data[k] = data[k].isoformat()
+
+        # return data
+        if excluded_fields is None:
+            excluded_fields = []
+
+        data = {'type': self.__tablename__}
+        c_keys = set(inspect(self).mapper.columns.keys())
+        for c_key in c_keys:
+            # logging.warning(f'c_key >> {c_key}')
+            if c_key in excluded_fields:
+                continue
+            value = getattr(self, c_key)
+            if isinstance(value, datetime):
+                data[c_key] = value.isoformat()
+            else:
+                data[c_key] = value
+
+        if include_relationship:
+            r_keys = set(inspect(self).mapper.relationships.keys())
+            for r_key in r_keys:
+                # logging.warning(f'r_key >> {r_key}')
+                if r_key in excluded_fields:
+                    continue
+                value = getattr(self, r_key)
+                if isinstance(value, list):
+                    data[r_key] = []
+                    for i in value:
+                        if include_relationship == 1:
+                            data[r_key].append(i.object_to_dict())
+                if isinstance(value, BaseModel):
+                    if include_relationship == 1:
+                        data[r_key] = value.object_to_dict()
 
         return data
 
@@ -763,6 +797,7 @@ def init_orm(app):
         # ~ History.__table__.drop(db.engine)
         db.create_all()
         db.session.commit()
+        logging.warning('create_all !!!')
 
     install_listeners()
 
