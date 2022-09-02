@@ -29,8 +29,12 @@ def frmt_model_obj(model_obj, excluded_fields,
 
     model_dict = json.loads(model_json_str)
     if worktimes:
-        wtimes = model_dict.get('worktimes')
-        model_dict['worktimes'] = sum([float(wt.get('duration')) for wt in wtimes])
+        if 'worktimes' in model_dict:
+            wtimes = model_dict.get('worktimes')
+            model_dict['worktimes'] = sum([float(wt.get('duration')) for wt in wtimes])
+        if 'worktimes_claim' in model_dict:
+            wtimes = model_dict.get('worktimes_claim')
+            model_dict['worktimes_claim'] = sum([float(wt.get('duration')) for wt in wtimes])
     if milestone:
         milestn = model_dict.get('milestone')
         model_dict['milestone'] = milestn.get('name') if milestn else None
@@ -77,6 +81,24 @@ class ProjectApi(Resource):
         return Response(response_json, mimetype="application/json", status=200)
 
 
+class ClaimApi(Resource):
+
+    def get(self):
+
+        excluded_fields = ['content', 'description', 'lesson_learned', 'modifications', 'followers']
+        claims_db = DB_SESSION.query(flask_tracker.models.Claim)
+        claims = [frmt_model_obj(c, excluded_fields, include_relationship=1, worktimes=True, milestone=True)
+                 for c in claims_db]
+
+        response = {
+            "results": claims
+        }
+
+        response_json = json.dumps(response, indent = 4)
+
+        return Response(response_json, mimetype="application/json", status=200)
+
+
 def init_restless_api(app, db):
 
     # creating APIs using flask_restful library
@@ -88,3 +110,4 @@ def init_restless_api(app, db):
 
     _api.add_resource(TaskApi, URL_PREFIX + 'task')
     _api.add_resource(ProjectApi, URL_PREFIX + 'project')
+    _api.add_resource(ClaimApi, URL_PREFIX + 'claim')

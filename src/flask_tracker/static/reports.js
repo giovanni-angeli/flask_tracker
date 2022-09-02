@@ -1,7 +1,8 @@
 var tasksMilestones = []
 var tasksList = null
 var projectList = null
-var currentTaskList = []
+var claimList = null
+var currentList = []
 var milestoneFilter = null
 var projectFilter = null
 
@@ -18,10 +19,11 @@ function formatAsPercent(num) {
 }
 
 let setup_global_vars = function() {
-  if (tasksList == null || projectList == null) return;
+  if (tasksList == null || projectList == null || claimList == null) return;
 
-  console.log(tasksList)
-  console.log(projectList)
+  console.debug(tasksList)
+  console.debug(projectList)
+  console.debug(claimList)
 
 }
 
@@ -43,6 +45,14 @@ function init_html(){
       setup_global_vars()
     }).catch(err => console.error(err));
 
+  console.debug('fetch /api/v1/claim')
+  fetch('/api/v1/claim')
+    .then((response) => response.json())
+    .then((data) => {
+      claimList = data.results
+      setup_global_vars()
+    }).catch(err => console.error(err));
+
   console.log('end of init_html() ')
 
   // inserire un loading spinner?
@@ -56,74 +66,93 @@ function showTasksByStatus(){
   // clear all select2 selections
   $('.js-example-placeholder-multiple').val(null).trigger('change');
 
-  tasksByStatus(tasksList)
+  // var taskInfo = {'name': 'task', 'list': tasksList}
+  // renderByStatus(taskInfo)
+  currentList = []
+  currentList = tasksList.slice()
+  console.log('showTasksByStatus - currentList: ',currentList)
+  renderByStatus(tasksList)
 }
 
-function tasksByStatus(taskList, resetFilters=true){
+function showClaimsByStatus(){
 
-  if (taskList == null) return;
+  if (claimList == null) return;
+
+  // clear all select2 selections
+  $('.js-example-placeholder-multiple').val(null).trigger('change');
+
+  currentList = []
+  currentList = claimList.slice()
+  console.log('showClaimsByStatus - currentList: ',currentList)
+  renderByStatus(claimList)
+}
+
+// NDR: tasksByStatus renamed to renderByStatus
+function renderByStatus(modelList, resetFilters=true){
+
+  if (modelList == null) return;
 
   $("#table-status-tasks tbody tr").remove()
   $("#filters").show()
   // $("filters").attr("display","inline-block");
 
-  var total_tasks = taskList.length
-  var new_tasks = 0
-  var open_tasks = 0
-  var in_progress_tasks = 0
-  var suspended_tasks = 0
-  var test_tasks = 0
-  var closed_tasks = 0
-  var invalid_tasks = 0
-  var task_milestones = []
+  var total = modelList.length
+  var new_ = 0
+  var open = 0
+  var in_progress = 0
+  var suspended = 0
+  var test = 0
+  var closed = 0
+  var invalid = 0
+  var milestones = []
 
-  for (task of taskList) {
-    switch (task.status){
+  for (m of modelList) {
+    switch (m.status){
       case "new":
-        new_tasks++
+        new_++
         break
       case "open":
-        open_tasks++
+        open++
         break
       case "in_progress":
-        in_progress_tasks++
+        in_progress++
         break
       case "suspended":
-        suspended_tasks++
+        suspended++
         break
       case "test":
-        test_tasks++
+        test++
         break
       case "closed":
-        closed_tasks++
+        closed++
         break
       case "invalid":
-        invalid_tasks++
+        invalid++
         break
       default:
-        console.log(`Sorry, we are out of ${task.status}.`);
+        console.log(`Sorry, we are out of ${m.status}.`);
     }
-    if (task.milestone !== undefined && !task_milestones.includes(task.milestone)) { 
-      task_milestones.push(task.milestone)
-    }
+    if (m.milestone !== undefined && !milestones.includes(m.milestone)) { 
+      milestones.push(m.milestone)
+    }  
   }
 
-  var task_numbers = [total_tasks, new_tasks, open_tasks, in_progress_tasks, suspended_tasks,
-                      test_tasks, closed_tasks, invalid_tasks]
-  const task_col = ['Total Tasks', 'New Tasks', 'Open Tasks', 'In progess Tasks', 'Suspended Tasks',
-                    'Test Tasks', 'Closed Tasks', 'Invalid Tasks']
-  for (const [i, elm] of task_col.entries()) {
+  var numbers = [total, new_, open, in_progress, suspended,
+                      test, closed, invalid]
+  const col = ['Total', 'New', 'Open', 'In progess', 'Suspended',
+                    'Test', 'Closed', 'Invalid']
+  for (const [i, elm] of col.entries()) {
     var table = $('#table-status-tasks')
     var tr = $('<tr>')
-    var percentage = formatAsPercent(task_numbers[i]/total_tasks)
+    var percentage = formatAsPercent(numbers[i]/total)
     tr.append('<td class="table-status-tasks-td">' + elm + '</td>')
-    tr.append('<td class="table-status-tasks-td">' + task_numbers[i] + ' / ' + total_tasks + '</td>')
+    tr.append('<td class="table-status-tasks-td">' + numbers[i] + ' / ' + total + '</td>')
     tr.append('<td class="table-status-tasks-td">' + percentage + '</td>')
     table.find('tbody').append(tr)
   }
 
-  var labels = task_col.slice(1)
-  var data = task_numbers.slice(1)
+  var labels = col.slice(1)
+  var data = numbers.slice(1)
   var colors = [
     '#26D7AE',  // new
     '#52D726',  // open
@@ -136,8 +165,8 @@ function tasksByStatus(taskList, resetFilters=true){
   drawPieChart(labels, data, colors)
 
 
-  if (task_milestones && projectList) {
-    if ( resetFilters ) populateStatusFilters(task_milestones, projectList)
+  if (milestones && projectList) {
+    if ( resetFilters ) populateStatusFilters(milestones, projectList)
   }
 
 }
@@ -180,6 +209,7 @@ function drawPieChart(labels, data, colors){
       responsive: true
     }
   };
+  // TODO: from js vanilla to jquery?
   var ctx = document.getElementById("chart-area").getContext("2d");
   if (window.statusPie){ window.statusPie.destroy() }
   window.statusPie = new Chart(ctx, config);
@@ -190,16 +220,18 @@ function applyFilter(){
   console.log('milestoneFilter: ',milestoneFilter)
   console.log('projectFilter: ',projectFilter)
 
-  const modelList = tasksList.slice()
+  console.log('currentList: ',currentList)
+
+  // const modelList = tasksList.slice()
   const filter = {
     milestone: milestoneFilter,
     project_id: projectFilter
   }
   console.log(filter)
 
-  var filteredModelList = tasksList.filter(item => {
+  var filteredModelList = currentList.filter(item => {
     for (let key in filter) {
-      if (filter[key] === undefined ){
+      if ( !filter[key] ){
         continue
       }
       if (item[key] === undefined || item[key] != filter[key])
@@ -208,11 +240,30 @@ function applyFilter(){
     return true;
   })
   console.log(filteredModelList)
-  tasksByStatus(filteredModelList, false)
+  renderByStatus(filteredModelList, false)
 }
 
 function resetFilter(){
-  showTasksByStatus()
+
+  if ( currentList == null ) return;
+  // var mapResets = {
+  //   'task': showTasksByStatus(),
+  //   'claim': showClaimsByStatus()
+  // }
+  var currModelType = currentList[0].type
+  console.log('currModelType > ',currModelType)
+  // mapResets.currModelType
+  switch (currModelType){
+    case "task":
+      showTasksByStatus()
+      break
+    case "claim":
+      showClaimsByStatus()
+      break
+    default:
+      console.log(`Sorry, we are out of ${m.status}.`);
+  }
+
 }
 
 // TODO: check for this func
