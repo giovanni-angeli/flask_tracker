@@ -17,6 +17,7 @@
     <div class="sidenav">
       <a href="javascript:showTasksByStatus();">Status Tasks</a>
       <a href="javascript:showClaimsByStatus();">Status Claim</a>
+      <a href="javascript:showProjectsWorktimes();">Projects Wortimes</a>
     </div>
 
     <div class="main">
@@ -29,7 +30,7 @@
         </div>
       </div>
       <div id="filters">
-        <div>
+        <div id="wrapper-filter-milestone">
           <label for="filter-by-milestone">
             Filter by milestones
           </label>
@@ -38,7 +39,7 @@
           </select>
         </div>
         
-        <div>
+        <div id="wrapper-filter-project">
           <label for="filter-by-project">
             Filter by project
           </label>

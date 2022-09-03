@@ -2,9 +2,10 @@ var tasksMilestones = []
 var tasksList = null
 var projectList = null
 var claimList = null
-var currentList = []
 var milestoneFilter = null
 var projectFilter = null
+var currentList = []
+var currentMode = null
 
 function formatAsPercent(num) {
   percentageNum = Intl.NumberFormat('default', {
@@ -66,10 +67,10 @@ function showTasksByStatus(){
   // clear all select2 selections
   $('.js-example-placeholder-multiple').val(null).trigger('change');
 
-  // var taskInfo = {'name': 'task', 'list': tasksList}
-  // renderByStatus(taskInfo)
+  // TODO: better handling of currentList
   currentList = []
   currentList = tasksList.slice()
+  currentMode = 'renderByStatus'
   console.log('showTasksByStatus - currentList: ',currentList)
   renderByStatus(tasksList)
 }
@@ -81,19 +82,32 @@ function showClaimsByStatus(){
   // clear all select2 selections
   $('.js-example-placeholder-multiple').val(null).trigger('change');
 
+  // TODO: better handling of currentList
   currentList = []
   currentList = claimList.slice()
+  currentMode = 'renderByStatus'
   console.log('showClaimsByStatus - currentList: ',currentList)
   renderByStatus(claimList)
 }
 
-// NDR: tasksByStatus renamed to renderByStatus
+function showProjectsWorktimes(){
+  if (claimList == null || tasksList == null) return;
+  // alert('TBA')
+  var combinatedList = tasksList.concat(claimList);
+  // TODO: better handling of currentList
+  currentList = []
+  currentList = combinatedList.slice()
+  currentMode = 'renderProjectsByWorktimes'
+  renderWorkTimesByProjects(combinatedList)
+}
+
 function renderByStatus(modelList, resetFilters=true){
 
   if (modelList == null) return;
 
   $("#table-status-tasks tbody tr").remove()
   $("#filters").show()
+  $("#wrapper-filter-milestone").show()
   // $("filters").attr("display","inline-block");
 
   var total = modelList.length
@@ -171,6 +185,54 @@ function renderByStatus(modelList, resetFilters=true){
 
 }
 
+function renderWorkTimesByProjects(modelList){
+  $("#table-status-tasks tbody tr").remove()
+  $("#filters").show()
+  $("#wrapper-filter-milestone").hide()
+
+  console.log('[renderWorkTimesByProjects] modelList: ',modelList)
+
+  var wt_total = 0.0
+  var wt_tasks = 0.0
+  var wt_claims = 0.0
+
+  for (m of modelList) {
+    switch (m.type){
+      case "task":
+        wt_tasks += parseFloat(m.worktimes)
+        break
+      case "claim":
+        wt_claims += parseFloat(m.worktimes_claim)
+        break
+      default:
+        console.log(`Sorry, we are out of ${m.type}.`);
+    }
+  }
+
+  wt_total = wt_tasks + wt_claims
+  var numbers = [wt_total, wt_tasks, wt_claims]
+  const col = ['Total Worked Hours', 'Tasks Worked Hours', 'Claims Worked Hours', ]
+  for (const [i, elm] of col.entries()) {
+    var table = $('#table-status-tasks')
+    var tr = $('<tr>')
+    var percentage = formatAsPercent(numbers[i]/wt_total)
+    tr.append('<td class="table-status-tasks-td">' + elm + '</td>')
+    tr.append('<td class="table-status-tasks-td">' + numbers[i] + ' / ' + wt_total + '</td>')
+    tr.append('<td class="table-status-tasks-td">' + percentage + '</td>')
+    table.find('tbody').append(tr)
+  }
+
+  var labels = col.slice(1)
+  var data = numbers.slice(1)
+  var colors = [
+    '#007ED6',  // task
+    '#FF0000',  // claim
+  ]
+  drawPieChart(labels, data, colors)
+
+  populateStatusFilters([], projectList)
+}
+
 function populateStatusFilters(milestones, projects){
   var sortedUniqueMilestones = [...new Set(milestones)]
   var sortedUniqueProjects = [...new Set(projects)]
@@ -222,7 +284,6 @@ function applyFilter(){
 
   console.log('currentList: ',currentList)
 
-  // const modelList = tasksList.slice()
   const filter = {
     milestone: milestoneFilter,
     project_id: projectFilter
@@ -240,52 +301,40 @@ function applyFilter(){
     return true;
   })
   console.log(filteredModelList)
-  renderByStatus(filteredModelList, false)
+
+  switch (currentMode){
+    case "renderByStatus":
+      renderByStatus(filteredModelList, false)
+      break;
+    case "renderProjectsByWorktimes":
+      renderWorkTimesByProjects(filteredModelList, false)
+      break;
+    default:
+      console.log(`Sorry, we are out of ${currentMode}.`);
+  }
 }
 
 function resetFilter(){
 
   if ( currentList == null ) return;
-  // var mapResets = {
-  //   'task': showTasksByStatus(),
-  //   'claim': showClaimsByStatus()
-  // }
-  var currModelType = currentList[0].type
-  console.log('currModelType > ',currModelType)
-  // mapResets.currModelType
-  switch (currModelType){
-    case "task":
-      showTasksByStatus()
-      break
-    case "claim":
-      showClaimsByStatus()
-      break
-    default:
-      console.log(`Sorry, we are out of ${m.status}.`);
-  }
 
-}
+  switch (currentMode){
+    case "renderByStatus":
+      var currModelType = currentList[0].type
+      console.log('currModelType > ',currModelType)
 
-// TODO: check for this func
-function filterTasks(term){
-  if (tasksList == null) return;
-
-  var filteredTaskList = []
-  console.log('term : ', term)
-
-  if (term){
-    console.debug('filtering tasksList')
-    for ( task of tasksList ) {
-      if ( task.milestone !== undefined ) {
-        if( task.milestone == term ){
-          filteredTaskList.push(task);
-        }
+      if ( currModelType == "task" ) {
+        showTasksByStatus()
+      } else {
+        showClaimsByStatus()
       }
+      break;
+    case "renderProjectsByWorktimes":
+      showProjectsWorktimes(currentList, false)
+      break;
+    default:
+      console.log(`Sorry, we are out of ${currentMode}.`);
     }
-  } else { filteredTaskList = tasksList.slice()}
-
-  console.debug(filteredTaskList)
-  tasksByStatus(filteredTaskList)
 }
 
 $(document).ready(function () {
