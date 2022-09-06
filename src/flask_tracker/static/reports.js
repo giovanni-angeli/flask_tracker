@@ -4,6 +4,8 @@ var projectList = null
 var claimList = null
 var milestoneFilter = null
 var projectFilter = null
+var startDateFilter = null
+var dueDateFilter = null
 var currentList = []
 var currentMode = null
 
@@ -286,7 +288,9 @@ function applyFilter(){
 
   const filter = {
     milestone: milestoneFilter,
-    project_id: projectFilter
+    project_id: projectFilter,
+    start_date: startDateFilter,
+    due_date: dueDateFilter,
   }
   console.log(filter)
 
@@ -317,6 +321,8 @@ function applyFilter(){
 function resetFilter(){
 
   if ( currentList == null ) return;
+
+  $("input[type=date]").val("")
 
   switch (currentMode){
     case "renderByStatus":
@@ -361,6 +367,19 @@ $(document).ready(function () {
     var current_val = $(this).val()[0]
     console.debug(current_val)
     projectFilter = current_val
+  });
+
+  $("#input-startdate").on('change', function() {
+    var current_val = $(this).val()
+    console.debug(current_val)
+    startDateFilter = current_val
+  });
+
+
+  $("#input-duedate").on('change', function() {
+    var current_val = $(this).val()
+    console.debug(current_val)
+    dueDateFilter = current_val
   });
 
 });

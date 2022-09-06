@@ -73,16 +73,30 @@
   display: flex;
   flex-wrap: wrap;
   margin-left: 165px;
-  width: 70%
+  width: 70%;
 }
 
 #filters {
-  margin-top: 35px;
+  margin-bottom: 35px;
   margin-left: 165px;
   display: none;
-  /*display: inline-block;*/
+}
+
+#wrapper-btn-filters {
+  margin-top: 20px;
 }
 
 .filters_btn {
   display: inline-block;
+}
+
+.filter {
+  display:inline-block
+}
+
+.filter-row2 {
+  margin-top: 10px;
+}
+.filter-date {
+  margin-right: 15px;
 }

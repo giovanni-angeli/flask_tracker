@@ -40,6 +40,12 @@ def frmt_model_obj(model_obj, excluded_fields,
         model_dict['milestone'] = milestn.get('name') if milestn else None
         model_dict['project_id'] = milestn.get('project_id') if milestn else None
     # t_json_str = json.dumps(t_dict, indent = 4)
+    date_keys = ['installation_date', 'date_created', 'date_modified', 'start_date', 'due_date']
+    for d in date_keys:
+        m_dict_date = model_dict.get(d, None)
+        if m_dict_date:
+            m_dict_date = m_dict_date.split('T')[0] # get only yyyy-mm-dd
+            model_dict[d] = m_dict_date
 
     return model_dict
 
