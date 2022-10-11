@@ -272,11 +272,11 @@ function applyFilter(){
 
   if(startDateFilter && startDateFilter.length != 0){
     filteredModelList = filteredModelList.filter(
-      elem => elem.start_date >= startDateFilter[0] && elem.start_date <= startDateFilter[0] )
+      elem => elem.start_date >= startDateFilter[0] && elem.start_date <= startDateFilter[1] )
   }
   if(dueDateFilter && dueDateFilter.length != 0){
     filteredModelList = filteredModelList.filter(
-      elem => elem.due_date >= dueDateFilter[0] && elem.due_date <= dueDateFilter[0] )
+      elem => elem.due_date >= dueDateFilter[0] && elem.due_date <= dueDateFilter[1] )
   }
   console.log(filteredModelList)
 
