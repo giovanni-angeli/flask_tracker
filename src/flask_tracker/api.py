@@ -94,10 +94,29 @@ class ClaimApi(Resource):
         excluded_fields = ['content', 'description', 'lesson_learned', 'modifications', 'followers']
         claims_db = DB_SESSION.query(flask_tracker.models.Claim)
         claims = [frmt_model_obj(c, excluded_fields, include_relationship=1, worktimes=True, milestone=True)
-                 for c in claims_db]
+                  for c in claims_db]
 
         response = {
             "results": claims
+        }
+
+        response_json = json.dumps(response, indent = 4)
+
+        return Response(response_json, mimetype="application/json", status=200)
+
+
+class MilestoneApi(Resource):
+
+    def get(self):
+
+        excluded_fields = ['tasks', 'claims', 'project', 'description']
+        milestone_db = DB_SESSION.query(flask_tracker.models.Milestone)
+        milestones = [frmt_model_obj(m, excluded_fields).get('name')
+                      for m in milestone_db]
+        unique_milestones = list(set(milestones))
+
+        response = {
+            "results": unique_milestones
         }
 
         response_json = json.dumps(response, indent = 4)
@@ -115,5 +134,6 @@ def init_restless_api(app, db):
         DB_SESSION = db.session
 
     _api.add_resource(TaskApi, URL_PREFIX + 'task')
-    _api.add_resource(ProjectApi, URL_PREFIX + 'project')
     _api.add_resource(ClaimApi, URL_PREFIX + 'claim')
+    _api.add_resource(ProjectApi, URL_PREFIX + 'project')
+    _api.add_resource(MilestoneApi, URL_PREFIX + 'milestone')

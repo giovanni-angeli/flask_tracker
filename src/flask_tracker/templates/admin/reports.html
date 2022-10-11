@@ -10,9 +10,10 @@
     <script type="text/javascript" src="{{ url_for('static', filename='reports.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='chart.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='select2.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='easepick.min.js') }}"></script>
   </head>
 
-  <body onload="init_html()">
+  <body>
 
     <div class="sidenav">
       <a href="javascript:showTasksByStatus();">Status Tasks</a>
@@ -23,14 +24,6 @@
     <div class="main">
       <div id="filters">
         <div id="wrapper-filters">
-          <div id="wrapper-filter-milestone" class="filter">
-            <label for="filter-by-milestone">
-              Filter by milestones
-            </label>
-            <br>
-            <select id="filter-by-milestone" class="js-example-placeholder-multiple js-states form-control" style="width: 400px" multiple="multiple">
-            </select>
-          </div>          
           <div id="wrapper-filter-project" class="filter">
             <label for="filter-by-project">
               Filter by project
@@ -39,24 +32,33 @@
             <select id="filter-by-project" class="js-example-placeholder-multiple js-states form-control" style="width: 400px" multiple="multiple">
             </select>
           </div>
+          <div id="wrapper-filter-milestone" class="filter">
+            <label for="filter-by-milestone">
+              Filter by milestones
+            </label>
+            <br>
+            <select id="filter-by-milestone" class="js-example-placeholder-multiple js-states form-control" style="width: 400px" multiple="multiple">
+            </select>
+          </div>
 
           <br>
 
           <div id="wrapper-filter-startdate" class="filter filter-row2 filter-date">
             <label for="filter-by-startdate">
-              Filter by start date
+              Filter by start date range
             </label>
             <br>
-            <input type="date" id="input-startdate">
+            <input id="datepicker-startdate"/>
           </div>
           <div id="wrapper-filter-duedate" class="filter filter-row2 filter-date">
             <label for="filter-by-duedate">
-              Filter by due date
+              Filter by due date range
             </label>
             <br>
-            <input type="date" id="input-duedate">
+            <input id="datepicker-duedate"/>
           </div>
-
+          <br>
+          
         </div>
         <div id="wrapper-btn-filters">
           <button type="button" class="filters_btn" onclick="applyFilter()">Apply Filters</button>
@@ -73,8 +75,11 @@
       </div>
     </div>
 
+    <div id="loading-container">LOADING ...</div>
     <script type="text/javascript">
       console.debug('script at the end of the body')
+      const easepickCssUrl = "{{ url_for('static', filename='easepick.css') }}"
+
     </script>
   </body>
 </html>

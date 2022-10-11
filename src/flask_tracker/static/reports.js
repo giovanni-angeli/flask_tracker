@@ -1,13 +1,15 @@
-var tasksMilestones = []
 var tasksList = null
 var projectList = null
 var claimList = null
-var milestoneFilter = null
-var projectFilter = null
+var milestoneFilterVal = null
+var projectFilterVal = null
 var startDateFilter = null
 var dueDateFilter = null
 var currentList = []
 var currentMode = null
+
+let pickerStartdate = null
+let pickerDuedate = null
 
 function formatAsPercent(num) {
   percentageNum = Intl.NumberFormat('default', {
@@ -21,53 +23,19 @@ function formatAsPercent(num) {
   return percentageNum
 }
 
-let setup_global_vars = function() {
-  if (tasksList == null || projectList == null || claimList == null) return;
+const cleanFilters = () => {
+   // clear all select2 selections
+  $('.js-example-placeholder-multiple').val(null).trigger('change');
 
-  console.debug(tasksList)
-  console.debug(projectList)
-  console.debug(claimList)
-
-}
-
-function init_html(){
-
-  console.debug('fetch /api/v1/task')
-  fetch('/api/v1/task')
-    .then((response) => response.json())
-    .then((data) => {
-      tasksList = data.results
-      setup_global_vars()
-    }).catch(err => console.error(err));
-
-  console.debug('fetch /api/v1/task')
-  fetch('/api/v1/project')
-    .then((response) => response.json())
-    .then((data) => {
-      projectList = data.results
-      setup_global_vars()
-    }).catch(err => console.error(err));
-
-  console.debug('fetch /api/v1/claim')
-  fetch('/api/v1/claim')
-    .then((response) => response.json())
-    .then((data) => {
-      claimList = data.results
-      setup_global_vars()
-    }).catch(err => console.error(err));
-
-  console.log('end of init_html() ')
-
-  // inserire un loading spinner?
-
+  pickerStartdate.clear()
+  pickerDuedate.clear()
 }
 
 function showTasksByStatus(){
 
   if (tasksList == null) return;
 
-  // clear all select2 selections
-  $('.js-example-placeholder-multiple').val(null).trigger('change');
+  cleanFilters()
 
   // TODO: better handling of currentList
   currentList = []
@@ -81,8 +49,7 @@ function showClaimsByStatus(){
 
   if (claimList == null) return;
 
-  // clear all select2 selections
-  $('.js-example-placeholder-multiple').val(null).trigger('change');
+  cleanFilters()
 
   // TODO: better handling of currentList
   currentList = []
@@ -94,7 +61,9 @@ function showClaimsByStatus(){
 
 function showProjectsWorktimes(){
   if (claimList == null || tasksList == null) return;
-  // alert('TBA')
+
+  cleanFilters()
+
   var combinatedList = tasksList.concat(claimList);
   // TODO: better handling of currentList
   currentList = []
@@ -106,6 +75,8 @@ function showProjectsWorktimes(){
 function renderByStatus(modelList, resetFilters=true){
 
   if (modelList == null) return;
+
+  currentMode = 'renderByStatus'
 
   $("#table-status-tasks tbody tr").remove()
   $("#filters").show()
@@ -179,15 +150,15 @@ function renderByStatus(modelList, resetFilters=true){
     '#FF0000',  // invalid
   ]
   drawPieChart(labels, data, colors)
+  $("#canvas-holder").width('40%');
 
 
   if (milestones && projectList) {
     if ( resetFilters ) populateStatusFilters(milestones, projectList)
   }
-
 }
 
-function renderWorkTimesByProjects(modelList){
+function renderWorkTimesByProjects(modelList, resetFilters=true){
   $("#table-status-tasks tbody tr").remove()
   $("#filters").show()
   $("#wrapper-filter-milestone").hide()
@@ -231,8 +202,9 @@ function renderWorkTimesByProjects(modelList){
     '#FF0000',  // claim
   ]
   drawPieChart(labels, data, colors)
+  $("#canvas-holder").width('30%');
 
-  populateStatusFilters([], projectList)
+  if ( resetFilters ) populateStatusFilters([], projectList)
 }
 
 function populateStatusFilters(milestones, projects){
@@ -254,7 +226,6 @@ function populateStatusFilters(milestones, projects){
         text: project.name
     }));
   }
-
 }
 
 function drawPieChart(labels, data, colors){
@@ -273,7 +244,7 @@ function drawPieChart(labels, data, colors){
       responsive: true
     }
   };
-  // TODO: from js vanilla to jquery?
+
   var ctx = document.getElementById("chart-area").getContext("2d");
   if (window.statusPie){ window.statusPie.destroy() }
   window.statusPie = new Chart(ctx, config);
@@ -281,29 +252,32 @@ function drawPieChart(labels, data, colors){
 
 function applyFilter(){
 
-  console.log('milestoneFilter: ',milestoneFilter)
-  console.log('projectFilter: ',projectFilter)
-
-  console.log('currentList: ',currentList)
-
-  const filter = {
-    milestone: milestoneFilter,
-    project_id: projectFilter,
-    start_date: startDateFilter,
-    due_date: dueDateFilter,
+  const filters = {
+    milestone: milestoneFilterVal,
+    project_id: projectFilterVal,
   }
-  console.log(filter)
+  console.log(filters)
+  console.log(`startDateFilter: ${startDateFilter} | dueDateFilter: ${dueDateFilter}`)
 
   var filteredModelList = currentList.filter(item => {
-    for (let key in filter) {
-      if ( !filter[key] ){
+    for (let key in filters) {
+      if ( !filters[key] ){
         continue
       }
-      if (item[key] === undefined || item[key] != filter[key])
+      if (item[key] === undefined || item[key] != filters[key])
         return false;
     }
     return true;
   })
+
+  if(startDateFilter && startDateFilter.length != 0){
+    filteredModelList = filteredModelList.filter(
+      elem => elem.start_date >= startDateFilter[0] && elem.start_date <= startDateFilter[0] )
+  }
+  if(dueDateFilter && dueDateFilter.length != 0){
+    filteredModelList = filteredModelList.filter(
+      elem => elem.due_date >= dueDateFilter[0] && elem.due_date <= dueDateFilter[0] )
+  }
   console.log(filteredModelList)
 
   switch (currentMode){
@@ -322,8 +296,6 @@ function resetFilter(){
 
   if ( currentList == null ) return;
 
-  $("input[type=date]").val("")
-
   switch (currentMode){
     case "renderByStatus":
       var currModelType = currentList[0].type
@@ -336,50 +308,130 @@ function resetFilter(){
       }
       break;
     case "renderProjectsByWorktimes":
-      showProjectsWorktimes(currentList, false)
+      showProjectsWorktimes(currentList)
       break;
     default:
       console.log(`Sorry, we are out of ${currentMode}.`);
     }
 }
 
-$(document).ready(function () {
-  //change selectboxes to selectize mode to be searchable
-  $("#filter-by-milestone").select2({
+const setIsLoading = function (isLoading) {
+    if (isLoading) {
+        document.getElementById('loading-container').classList.add('is-visible');
+        return;
+    }
+    document.getElementById('loading-container').classList.remove('is-visible');
+};
+
+const fetchRequests = () => {
+
+  const fetchReqTask = fetch(
+    "/api/v1/task"
+  ).then((res) => res.json())
+  .catch(err => console.error(err));
+
+  const fetchReqProject = fetch(
+    `/api/v1/project`
+  ).then((res) => res.json());
+
+  const fetchReqClaim = fetch(
+    `/api/v1/claim`
+  ).then((res) => res.json());
+
+  // do fetch requests in parallel using the Promise.all() method
+  const responses = Promise.all([fetchReqTask, fetchReqProject, fetchReqClaim]);
+
+  return responses
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/API/Window/DOMContentLoaded_event
+window.addEventListener('DOMContentLoaded', function initApp() {
+
+  setIsLoading(true);
+
+  let select2Dict = {
     width: 'resolve', // need to override the changed default
     maximumSelectionLength: 1,
     allowClear: false
-  })
+  }
+  const milestoneFilter = $("#filter-by-milestone").select2(select2Dict)
+  const projectFilter = $("#filter-by-project").select2(select2Dict)
+  
+  easepickDictBase = {
+    element: "",
+    css: [easepickCssUrl],
+    zIndex: 10,
+    grid: 2,
+    calendars: 2,
+    autoApply: true,
+    AmpPlugin: {
+        dropdown: {
+            months: true,
+            years: true,
+            minYear: 2017
+        },
+        resetButton: true
+    },
+    PresetPlugin: {
+        position: "bottom"
+    },
+    plugins: [
+        "AmpPlugin",
+        "RangePlugin",
+        "PresetPlugin"
+    ],
+  }
+  const easepickDictStartDate = JSON.parse(JSON.stringify(easepickDictBase)); // deep copy
+  const easepickDictDueDate = JSON.parse(JSON.stringify(easepickDictBase));   // deep copy
+  easepickDictDueDate.element = '#datepicker-duedate'
+  easepickDictStartDate.element = '#datepicker-startdate'
+  pickerStartdate = new easepick.create(easepickDictStartDate)
+  pickerDuedate = new easepick.create(easepickDictDueDate)
 
-  $("#filter-by-project").select2({
-    width: 'resolve', // need to override the changed default
-    maximumSelectionLength: 1,
-    allowClear: false
-  })
-
-  $("#filter-by-milestone").on('change', function() {
+  // jquery event handlers
+  milestoneFilter.on('change', function() {
     var current_val = $(this).val()[0]
-    console.debug(current_val)
-    milestoneFilter = current_val 
+    console.debug("filter-by-milestone val: ", current_val)
+    milestoneFilterVal = current_val 
   });
-
-  $("#filter-by-project").on('change', function() {
+  projectFilter.on('change', function() {
     var current_val = $(this).val()[0]
-    console.debug(current_val)
-    projectFilter = current_val
+    console.debug("filter-by-project val: ", current_val)
+    projectFilterVal = current_val
+  });
+  pickerStartdate.on('select', (evt) => {
+    // an object destructuring assignment. See https://mzl.la/3x6nnOQ
+    const { start, end } = evt.detail;
+    if (start instanceof Date && end instanceof Date) {
+      console.debug(start.format('YYYY-MM-DD'))
+      console.debug(end.format('YYYY-MM-DD'))
+      startDateFilter = [start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD')]
+    }
+  })
+  pickerStartdate.on('clear', (e) => {
+    startDateFilter = null
+  });
+  pickerDuedate.on('select', (evt) => {
+    // an object destructuring assignment. See https://mzl.la/3x6nnOQ
+    const { start, end } = evt.detail;
+    if (start instanceof Date && end instanceof Date) {
+      console.debug(start.format('YYYY-MM-DD'))
+      console.debug(end.format('YYYY-MM-DD'))
+      dueDateFilter = [start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD')]
+    }
+  })
+  pickerDuedate.on('clear', (e) => {
+    dueDateFilter = null
   });
 
-  $("#input-startdate").on('change', function() {
-    var current_val = $(this).val()
-    console.debug(current_val)
-    startDateFilter = current_val
-  });
-
-
-  $("#input-duedate").on('change', function() {
-    var current_val = $(this).val()
-    console.debug(current_val)
-    dueDateFilter = current_val
-  });
+  const allData = fetchRequests()
+  allData.then(
+    (fetchData) => {
+      tasksList = fetchData[0].results
+      projectList = fetchData[1].results
+      claimList = fetchData[2].results
+    }
+  ).catch(err => { console.error(err) })
+  .finally(() => { setIsLoading(false); });
 
 });

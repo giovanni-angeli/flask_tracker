@@ -26,6 +26,7 @@ from isoweek import Week          # pylint: disable=import-error
 
 import flask_login  # pylint: disable=import-error
 import flask_admin  # pylint: disable=import-error
+from flask import (Markup)
 from flask_admin.base import Admin, MenuLink    # pylint: disable=import-error
 
 from flask_tracker.models import (
@@ -93,6 +94,37 @@ def check_login(f):
         return f(*args, **kwargs)
 
     return wrapper
+
+
+def frmt_model_obj(model_obj, excluded_fields,
+        include_relationship=0, worktimes=False, milestone=False):
+
+    model_json_str = model_obj.object_to_json(
+        include_relationship=include_relationship,
+        excluded_fields=excluded_fields
+    )
+
+    model_dict = json.loads(model_json_str)
+    if worktimes:
+        if 'worktimes' in model_dict:
+            wtimes = model_dict.get('worktimes')
+            model_dict['worktimes'] = sum([float(wt.get('duration')) for wt in wtimes])
+        if 'worktimes_claim' in model_dict:
+            wtimes = model_dict.get('worktimes_claim')
+            model_dict['worktimes_claim'] = sum([float(wt.get('duration')) for wt in wtimes])
+    if milestone:
+        milestn = model_dict.get('milestone')
+        model_dict['milestone'] = milestn.get('name') if milestn else None
+        model_dict['project_id'] = milestn.get('project_id') if milestn else None
+    # t_json_str = json.dumps(t_dict, indent = 4)
+    date_keys = ['installation_date', 'date_created', 'date_modified', 'start_date', 'due_date']
+    for d in date_keys:
+        m_dict_date = model_dict.get(d, None)
+        if m_dict_date:
+            m_dict_date = m_dict_date.split('T')[0] # get only yyyy-mm-dd
+            model_dict[d] = m_dict_date
+
+    return model_dict
 
 
 class LoginForm(form.Form):
@@ -479,23 +511,28 @@ class TrackerAdminResources(flask_admin.AdminIndexView):
 
         session = MODELS_GLOBAL_CONTEXT['session']
 
-        tasks = [t.object_to_json(include_relationship=1) for t in session.query(Task)]
-        # tasks = [t for t in session.query(Task)]
-        # project_names = [p.name for p in session.query(Project).limit(50)]
-        # order_names = [o.name for o in session.query(Order).limit(50)]
-        # user_names = [o.name for o in session.query(User).limit(50)]
-        # logging.warning(f'tasks >> {tasks}')
-
-
-        ctx = {
-            # 'projects': project_names,
-            # 'orders': order_names,
-            # 'users': user_names,
-            # 'report_title': 'report 000',
-            # 'report_results': []
-            'tasks': tasks,
-            'total_tasks': len(tasks) 
+        excluded_fields = {
+            "tasks": [
+                "followers",
+                "description",
+                "attachments",
+                "content",
+                "resources",
+                "modifications",
+                "lesson_learned",
+            ],
+            "claim": [
+                "content",
+                "description",
+                "lesson_learned",
+                "modifications",
+                "followers",
+            ],
+            "milestone": ["tasks", "claims", "project", "description"],
+            "project": [],
         }
+
+        ctx = {}
 
         ret = self.render('admin/reports.html', **ctx)
 
