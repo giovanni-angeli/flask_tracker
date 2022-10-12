@@ -29,13 +29,15 @@ const cleanFilters = () => {
 
   pickerStartdate.clear()
   pickerDuedate.clear()
+
+  $("#filters").show()
 }
 
 function showTasksByStatus(){
 
-  if (tasksList == null) return;
+  if (tasksList == null || Object.keys(tasksList).length == 0) return;
 
-  cleanFilters()
+  // cleanFilters()
 
   // TODO: better handling of currentList
   currentList = []
@@ -47,7 +49,7 @@ function showTasksByStatus(){
 
 function showClaimsByStatus(){
 
-  if (claimList == null) return;
+  if (claimList == null || Object.keys(claimList).length == 0) return;
 
   cleanFilters()
 
@@ -60,9 +62,12 @@ function showClaimsByStatus(){
 }
 
 function showProjectsWorktimes(){
-  if (claimList == null || tasksList == null) return;
-
-  cleanFilters()
+  if (claimList == null ||
+      tasksList == null ||
+      Object.keys(claimList).length == 0 ||
+      Object.keys(tasksList).length == 0) {
+    return;
+  }
 
   var combinatedList = tasksList.concat(claimList);
   // TODO: better handling of currentList
@@ -74,12 +79,14 @@ function showProjectsWorktimes(){
 
 function renderByStatus(modelList, resetFilters=true){
 
-  if (modelList == null) return;
+  if (modelList == null || Object.keys(modelList).length == 0) return;
 
   currentMode = 'renderByStatus'
 
   $("#table-status-tasks tbody tr").remove()
-  $("#filters").show()
+  // $("#table-results tbody tr").remove()
+  $("#table-results tr").remove()
+  // $("#filters").show()
   $("#wrapper-filter-milestone").show()
   // $("filters").attr("display","inline-block");
 
@@ -154,16 +161,22 @@ function renderByStatus(modelList, resetFilters=true){
 
 
   if (milestones && projectList) {
-    if ( resetFilters ) populateStatusFilters(milestones, projectList)
+    if ( resetFilters ) {
+      cleanFilters()
+      populateStatusFilters(milestones, projectList)
+    }
   }
+
+  if(!resetFilters) showResultsAsTable(modelList)
 }
 
 function renderWorkTimesByProjects(modelList, resetFilters=true){
-  $("#table-status-tasks tbody tr").remove()
-  $("#filters").show()
-  $("#wrapper-filter-milestone").hide()
 
-  console.log('[renderWorkTimesByProjects] modelList: ',modelList)
+  if (modelList == null || Object.keys(modelList).length == 0) return;
+
+  $("#table-status-tasks tbody tr").remove()
+  $("#table-results tr").remove()
+  $("#wrapper-filter-milestone").hide()
 
   var wt_total = 0.0
   var wt_tasks = 0.0
@@ -204,7 +217,11 @@ function renderWorkTimesByProjects(modelList, resetFilters=true){
   drawPieChart(labels, data, colors)
   $("#canvas-holder").width('30%');
 
-  if ( resetFilters ) populateStatusFilters([], projectList)
+  if ( resetFilters ) {
+    cleanFilters()
+    populateStatusFilters([], projectList)
+  }
+  if(!resetFilters) showResultsAsTable(modelList)
 }
 
 function populateStatusFilters(milestones, projects){
@@ -302,17 +319,63 @@ function resetFilter(){
       console.log('currModelType > ',currModelType)
 
       if ( currModelType == "task" ) {
-        showTasksByStatus()
+        renderByStatus(tasksList)
       } else {
-        showClaimsByStatus()
+        renderByStatus(claimList)
       }
       break;
     case "renderProjectsByWorktimes":
-      showProjectsWorktimes(currentList)
+      renderWorkTimesByProjects(currentList)
       break;
     default:
       console.log(`Sorry, we are out of ${currentMode}.`);
     }
+}
+
+let showResultsAsTable = (modelList) => {
+
+  if(!startDateFilter && !dueDateFilter && !milestoneFilterVal && !projectFilterVal) {
+    return
+  }
+
+  const table = $('#table-results')
+
+  const headers = ['Name', 'Type', 'Status', 'Project', 'Start Date',
+                   'Due Date', 'Planned Time', 'Worktimes', 'Details']
+  const trHead = $('<tr>')
+  for (h of headers) {
+    trHead.append('<th style="min-width:100px">' + h + '</th>')
+  }
+  table.find('thead').append(trHead)
+
+  for (e of modelList) {
+    const attrbs = [e.name, e.type, e.status, `${e.project}.${e.milestone}`,
+                    e.start_date, e.due_date, e.planned_time]
+    let workTime = 0
+    if (Object.hasOwn(e, 'worktimes')){
+      attrbs.push(e.worktimes)
+      workTime = e.worktimes
+    }
+    if (Object.hasOwn(e, 'worktimes_claim')){
+      attrbs.push(e.worktimes_claim)
+      workTime = e.worktimes_claim
+    }
+    const tr = $('<tr>')
+    const lastElementIndex = attrbs.length - 1;
+    for (const [i, a] of Object.entries(attrbs)) {
+      let tdStartTag = '<td>'
+      if (i == lastElementIndex && e.planned_time > 0){
+        if (workTime <= e.planned_time) {
+          tdStartTag = '<td class="worktime-ok">'
+        } else {
+          tdStartTag = '<td class="worktime-ko">'
+        }
+      }
+      tr.append(`${tdStartTag}${a}</td>`)
+    }
+    tr.append(`<td><a href="/${e.type}/details/?id=${e.id}&url=%2F${e.type}%2F" target="_blank" rel="noopener noreferrer">Details</a></td>`)
+    table.find('tbody').append(tr)
+  }
 }
 
 const setIsLoading = function (isLoading) {

@@ -1,6 +1,10 @@
+.main {
+  margin-left: 165px;
+}
+
 /* TABLE CSS*/
 
-#table-status-tasks{
+#table-status-tasks, #table-results{
   margin-top: 20px;
 }
 
@@ -8,6 +12,25 @@
   border: 3px solid #dddddd;
   text-align: left;
   padding: 8px;
+}
+
+#table-results, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+
+#table-results th, td {
+  padding: 8px;
+  text-align: center;
+  min-width:100px;
+}
+
+#table-results .worktime-ok{
+  background: rgba(124, 252, 0, .4);
+}
+
+#table-results .worktime-ko{
+  background: rgba(255, 69, 0, .4);
 }
 
 /* SIDE NAV */
@@ -40,13 +63,13 @@
 .flex-container {
   display: flex;
   flex-wrap: wrap;
-  margin-left: 165px;
+  /*margin-left: 165px;*/
   width: 70%;
 }
 
 #filters {
   margin-bottom: 35px;
-  margin-left: 165px;
+  /*margin-left: 165px;*/
   display: none;
 }
 

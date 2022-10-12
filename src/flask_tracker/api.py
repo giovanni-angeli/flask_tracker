@@ -39,6 +39,15 @@ def frmt_model_obj(model_obj, excluded_fields,
         milestn = model_dict.get('milestone')
         model_dict['milestone'] = milestn.get('name') if milestn else None
         model_dict['project_id'] = milestn.get('project_id') if milestn else None
+        projct_id = milestn.get('project_id') if milestn else None
+        model_dict['project'] = None
+        if projct_id:
+            project_db = DB_SESSION.query(flask_tracker.models.Project).filter(flask_tracker.models.Project.id == projct_id).first()
+            project = project_db.object_to_dict()
+            model_dict['project'] = project.get('name')
+            # model_dict['project'] = getattr(project_db, 'name')
+
+
     # t_json_str = json.dumps(t_dict, indent = 4)
     date_keys = ['installation_date', 'date_created', 'date_modified', 'start_date', 'due_date']
     for d in date_keys:
@@ -55,7 +64,7 @@ class TaskApi(Resource):
     def get(self):
 
         excluded_fields = ['followers', 'description', 'attachments', 'content', 'resources', 'modifications', 'lesson_learned']
-        tasks_db = DB_SESSION.query(flask_tracker.models.Task)
+        tasks_db = DB_SESSION.query(flask_tracker.models.Task).order_by(flask_tracker.models.Task.date_created.desc())
         tasks = [frmt_model_obj(t, excluded_fields, include_relationship=1, worktimes=True, milestone=True)
                  for t in tasks_db]
         logging.warning(f'tasks({type(tasks)})')
@@ -92,7 +101,7 @@ class ClaimApi(Resource):
     def get(self):
 
         excluded_fields = ['content', 'description', 'lesson_learned', 'modifications', 'followers']
-        claims_db = DB_SESSION.query(flask_tracker.models.Claim)
+        claims_db = DB_SESSION.query(flask_tracker.models.Claim).order_by(flask_tracker.models.Claim.date_created.desc())
         claims = [frmt_model_obj(c, excluded_fields, include_relationship=1, worktimes=True, milestone=True)
                   for c in claims_db]
 
