@@ -3,8 +3,8 @@ var projectList = null
 var claimList = null
 var milestoneFilterVal = null
 var projectFilterVal = null
-var startDateFilter = null
-var dueDateFilter = null
+var startDateFilterValsList = null
+var dueDateFilterValsList = null
 var currentList = []
 var currentMode = null
 
@@ -181,14 +181,17 @@ function renderWorkTimesByProjects(modelList, resetFilters=true){
   var wt_total = 0.0
   var wt_tasks = 0.0
   var wt_claims = 0.0
+  var plannedHrs = 0.0
 
   for (m of modelList) {
     switch (m.type){
       case "task":
         wt_tasks += parseFloat(m.worktimes)
+        if (!isNaN(parseFloat(m.planned_time))) plannedHrs += parseFloat(m.planned_time)
         break
       case "claim":
         wt_claims += parseFloat(m.worktimes_claim)
+        if (!isNaN(parseFloat(m.planned_time))) plannedHrs += parseFloat(m.planned_time)
         break
       default:
         console.log(`Sorry, we are out of ${m.type}.`);
@@ -196,6 +199,7 @@ function renderWorkTimesByProjects(modelList, resetFilters=true){
   }
 
   wt_total = wt_tasks + wt_claims
+  console.log(`Total WorkHrs: ${wt_total} - Planned Hrs: ${plannedHrs}`)
   var numbers = [wt_total, wt_tasks, wt_claims]
   const col = ['Total Worked Hours', 'Tasks Worked Hours', 'Claims Worked Hours', ]
   for (const [i, elm] of col.entries()) {
@@ -221,7 +225,10 @@ function renderWorkTimesByProjects(modelList, resetFilters=true){
     cleanFilters()
     populateStatusFilters([], projectList)
   }
-  if(!resetFilters) showResultsAsTable(modelList)
+  if(!resetFilters) {
+    showResultsAsTable(modelList)
+    drawBarChart([plannedHrs, wt_total])
+  }
 }
 
 function populateStatusFilters(milestones, projects){
@@ -267,6 +274,53 @@ function drawPieChart(labels, data, colors){
   window.statusPie = new Chart(ctx, config);
 }
 
+// TODO: check this - slow animations
+function drawBarChart(data){
+  var maxY = Math.max(data[0], data[1])
+  var configBar = {
+    type: 'bar',
+    data: {
+      // labels: ['Planned hrs', 'Worked hrs'],
+      labels: ['hrs'],
+      datasets: [{
+        label: `Planned hrs: ${data[0]}`,
+        data: [data[0]],
+        backgroundColor: ['rgba(255, 99, 132)'],
+        borderWidth: 1
+      },
+      {
+        label: `Worked hrs: ${data[1]}`,
+        data: [data[1]],
+        backgroundColor: ['rgba(255, 159, 64)'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          display: true,
+          labels: {
+            color: 'rgb(0, 0, 0)'
+          }
+        },
+        tooltip: {
+          enabled: false // <-- this option disables tooltips
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          suggestedMax: maxY * 1.05
+        }
+      },
+    },
+  };
+
+  var ctxBar = document.getElementById("chart-bar-area").getContext("2d");
+  if (window.chartBar){ window.chartBar.destroy() }
+  window.chartBar = new Chart(ctxBar, configBar);
+}
+
 function applyFilter(){
 
   const filters = {
@@ -274,7 +328,15 @@ function applyFilter(){
     project_id: projectFilterVal,
   }
   console.log(filters)
-  console.log(`startDateFilter: ${startDateFilter} | dueDateFilter: ${dueDateFilter}`)
+  console.log(`startDateFilterValsList: ${startDateFilterValsList} | dueDateFilterValsList: ${dueDateFilterValsList}`)
+
+  if (filters.milestone == null &&
+      filters.project_id == null &&
+      startDateFilterValsList.length == 0 &&
+      dueDateFilterValsList.length == 0) {
+    return
+  } 
+
 
   var filteredModelList = currentList.filter(item => {
     for (let key in filters) {
@@ -287,16 +349,17 @@ function applyFilter(){
     return true;
   })
 
-  if(startDateFilter && startDateFilter.length != 0){
+  if(startDateFilterValsList && startDateFilterValsList.length != 0){
     filteredModelList = filteredModelList.filter(
-      elem => elem.start_date >= startDateFilter[0] && elem.start_date <= startDateFilter[1] )
+      elem => elem.start_date >= startDateFilterValsList[0] && elem.start_date <= startDateFilterValsList[1] )
   }
-  if(dueDateFilter && dueDateFilter.length != 0){
+  if(dueDateFilterValsList && dueDateFilterValsList.length != 0){
     filteredModelList = filteredModelList.filter(
-      elem => elem.due_date >= dueDateFilter[0] && elem.due_date <= dueDateFilter[1] )
+      elem => elem.due_date >= dueDateFilterValsList[0] && elem.due_date <= dueDateFilterValsList[1] )
   }
   console.log(filteredModelList)
 
+  // TODO: handle empty filteredModelList on renderBy funcs
   switch (currentMode){
     case "renderByStatus":
       renderByStatus(filteredModelList, false)
@@ -316,7 +379,6 @@ function resetFilter(){
   switch (currentMode){
     case "renderByStatus":
       var currModelType = currentList[0].type
-      console.log('currModelType > ',currModelType)
 
       if ( currModelType == "task" ) {
         renderByStatus(tasksList)
@@ -325,6 +387,7 @@ function resetFilter(){
       }
       break;
     case "renderProjectsByWorktimes":
+      if (window.chartBar){ window.chartBar.destroy() }
       renderWorkTimesByProjects(currentList)
       break;
     default:
@@ -334,7 +397,7 @@ function resetFilter(){
 
 let showResultsAsTable = (modelList) => {
 
-  if(!startDateFilter && !dueDateFilter && !milestoneFilterVal && !projectFilterVal) {
+  if(!startDateFilterValsList && !dueDateFilterValsList && !milestoneFilterVal && !projectFilterVal) {
     return
   }
 
@@ -468,11 +531,11 @@ window.addEventListener('DOMContentLoaded', function initApp() {
     if (start instanceof Date && end instanceof Date) {
       console.debug(start.format('YYYY-MM-DD'))
       console.debug(end.format('YYYY-MM-DD'))
-      startDateFilter = [start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD')]
+      startDateFilterValsList = [start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD')]
     }
   })
   pickerStartdate.on('clear', (e) => {
-    startDateFilter = null
+    startDateFilterValsList = null
   });
   pickerDuedate.on('select', (evt) => {
     // an object destructuring assignment. See https://mzl.la/3x6nnOQ
@@ -480,11 +543,11 @@ window.addEventListener('DOMContentLoaded', function initApp() {
     if (start instanceof Date && end instanceof Date) {
       console.debug(start.format('YYYY-MM-DD'))
       console.debug(end.format('YYYY-MM-DD'))
-      dueDateFilter = [start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD')]
+      dueDateFilterValsList = [start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD')]
     }
   })
   pickerDuedate.on('clear', (e) => {
-    dueDateFilter = null
+    dueDateFilterValsList = null
   });
 
   const allData = fetchRequests()
